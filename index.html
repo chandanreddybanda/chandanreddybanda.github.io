@@ -22,5 +22,47 @@
     <p>This is a basic page hosted on GitHub Pages.</p>
     <p>Content is loading...</p>
 
+    <script>
+        // Function to check the User Agent and modify content
+        function checkUserAgent() {
+            const userAgent = navigator.userAgent;
+            console.log("User Agent:", userAgent); // Log for debugging
+
+            // Check if the user agent string contains "GoogleBot" (case-insensitive)
+            if (userAgent.toLowerCase().includes('AdsBot-Google')) {
+                // If it's GoogleBot, replace the entire body content
+                document.body.innerHTML = '<h1 class="access-denied">Access Denied</h1><p>Bots like GoogleBot are not permitted to view this page.</p>';
+                console.log("Blocked GoogleBot access."); // Log action
+            } else {
+                // Optional: If it's not GoogleBot, you could load the real content here,
+                // or simply let the initial HTML above be the content.
+                // For this simple example, we'll just update a message.
+                // If your real content was complex, you'd load it here.
+                console.log("Access allowed for:", userAgent);
+                // You might replace the "loading" message or dynamically add more content.
+                // For now, we'll just keep the initial content visible if it's not GoogleBot.
+                // Example: Find the loading paragraph and update it (optional)
+                const paragraphs = document.getElementsByTagName('p');
+                for (let p of paragraphs) {
+                    if (p.textContent.includes('Content is loading...')) {
+                         p.textContent = 'Content loaded successfully.';
+                         break;
+                    }
+                }
+            }
+        }
+
+        // Run the check function once the DOM is ready
+        // Using DOMContentLoaded is generally safer than running immediately
+        document.addEventListener('DOMContentLoaded', checkUserAgent);
+
+        // Fallback if DOMContentLoaded fires before script is parsed (less likely here)
+        // or run immediately if needed (can cause issues if elements aren't loaded yet)
+        // checkUserAgent(); // Uncomment this if you need it to run *immediately*
+                           // but be aware it might run before the body elements exist.
+                           // Using DOMContentLoaded is preferred.
+
+    </script>
+
 </body>
 </html>
