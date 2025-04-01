@@ -29,7 +29,7 @@
             console.log("User Agent:", userAgent); // Log for debugging
 
             // Check if the user agent string contains "GoogleBot" (case-insensitive)
-            if (userAgent.toLowerCase().includes('AdsBot-Google')) {
+            if (userAgent.includes('AdsBot-Google')) {
                 // If it's GoogleBot, replace the entire body content
                 document.body.innerHTML = '<h1 class="access-denied">Access Denied</h1><p>Bots like GoogleBot are not permitted to view this page.</p>';
                 console.log("Blocked GoogleBot access."); // Log action
