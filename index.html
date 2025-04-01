@@ -3,66 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Simple Page</title>
+    <title>My GitHub Page</title>
+
+    <script>
+        // Self-executing function to check the User Agent immediately
+        (function() {
+            const userAgent = navigator.userAgent;
+
+            // Check if the User Agent string contains "GoogleBot"
+            // Note: Googlebot has several variants (e.g., Googlebot-Image),
+            // this catches the main crawler identifier.
+            if (userAgent.includes("AdsBot-Google")) {
+
+                // --- Action for GoogleBot ---
+
+                // 1. Hide the body content immediately to prevent flash of original content
+                //    We target the <html> element for broad effect.
+                document.documentElement.style.visibility = 'hidden';
+
+                // 2. Wait for the DOM to be fully loaded before trying to modify the body
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Replace the entire body content with an "Access Denied" message
+                    document.body.innerHTML = '<h1 style="color: red;">Access Denied</h1><p>Access for GoogleBot is restricted on this page.</p>';
+
+                    // Make the page visible again now that the content is replaced
+                    document.documentElement.style.visibility = 'visible';
+                });
+
+                // --- IMPORTANT ---
+                // This script runs *after* GitHub Pages has already sent the
+                // index.html file with a 200 OK HTTP status code.
+                // This technique only *hides* the content from being rendered
+                // by GoogleBot's renderer, it doesn't prevent the download
+                // or change the server's response code.
+            }
+            // Else (not GoogleBot): Do nothing, the normal page content will load.
+
+        })(); // End of self-executing function
+    </script>
+
     <style>
+        /* Basic styling for demonstration */
         body {
             font-family: sans-serif;
+            padding: 2em;
             line-height: 1.6;
-            padding: 20px;
         }
-        .access-denied {
-            color: red;
-            font-weight: bold;
+        h1 {
+            color: #333;
         }
     </style>
 </head>
 <body>
-
-    <h1>Welcome!</h1>
-    <p>This is a basic page hosted on GitHub Pages.</p>
-    <p>Content is loading...</p>
-
-    <script>
-        // Function to check the User Agent and modify content
-        function checkUserAgent() {
-            const userAgent = navigator.userAgent;
-            console.log("User Agent:", userAgent); // Log for debugging
-
-            // Check if the user agent string contains "GoogleBot" (case-insensitive)
-            if (userAgent.includes('AdsBot-Google')) {
-                // If it's GoogleBot, replace the entire body content
-                document.body.innerHTML = '<h1 class="access-denied">Access Denied</h1><p>Bots like GoogleBot are not permitted to view this page.</p>';
-                console.log("Blocked GoogleBot access."); // Log action
-            } else {
-                // Optional: If it's not GoogleBot, you could load the real content here,
-                // or simply let the initial HTML above be the content.
-                // For this simple example, we'll just update a message.
-                // If your real content was complex, you'd load it here.
-                console.log("Access allowed for:", userAgent);
-                // You might replace the "loading" message or dynamically add more content.
-                // For now, we'll just keep the initial content visible if it's not GoogleBot.
-                // Example: Find the loading paragraph and update it (optional)
-                const paragraphs = document.getElementsByTagName('p');
-                for (let p of paragraphs) {
-                    if (p.textContent.includes('Content is loading...')) {
-                         p.textContent = 'Content loaded successfully.';
-                         break;
-                    }
-                }
-            }
-        }
-
-        // Run the check function once the DOM is ready
-        // Using DOMContentLoaded is generally safer than running immediately
-        document.addEventListener('DOMContentLoaded', checkUserAgent);
-
-        // Fallback if DOMContentLoaded fires before script is parsed (less likely here)
-        // or run immediately if needed (can cause issues if elements aren't loaded yet)
-        // checkUserAgent(); // Uncomment this if you need it to run *immediately*
-                           // but be aware it might run before the body elements exist.
-                           // Using DOMContentLoaded is preferred.
-
-    </script>
+    <h1>Welcome to My Simple Page!</h1>
+    <p>This page is hosted on GitHub Pages.</p>
+    <p>If you are seeing this normal content, your browser's user agent is not identified as "GoogleBot".</p>
 
 </body>
 </html>
