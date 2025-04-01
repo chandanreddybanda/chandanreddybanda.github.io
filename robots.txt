@@ -1,0 +1,11 @@
+# robots.txt file to disallow Googlebot
+
+# Rule specifically for Google's main web crawler
+User-agent: AdsBot-Google (+http://www.google.com/adsbot.html)
+Disallow: /
+
+# Rule for all other crawlers (allows them)
+# If you omit this block, the default behavior for other crawlers
+# is usually permissive (allowed), but being explicit is good practice.
+User-agent: *
+Allow: /
