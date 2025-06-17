@@ -23,7 +23,7 @@
             padding: 32px;
             border-radius: 12px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            max-width: 600px; /* Slightly wider to accommodate graphs */
+            max-width: 600px;
             width: 100%;
             text-align: center;
         }
@@ -132,6 +132,41 @@
             border: 1px solid #cbd5e0;
             border-radius: 4px;
         }
+
+        /* Styles for Captured Spin Graphs */
+        .captured-spins-container {
+            margin-top: 40px;
+            border-top: 1px dashed #cbd5e0;
+            padding-top: 30px;
+            text-align: center;
+        }
+        .captured-spins-container h2 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1a202c;
+            margin-bottom: 24px;
+        }
+        .captured-spin-item {
+            background-color: #f0f4f8;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .captured-spin-item h4 {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .captured-spin-item canvas {
+            width: 100%;
+            height: 100px; /* Smaller height for captured snippets */
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -154,7 +189,7 @@
 
             <!-- Spin Counts -->
             <div class="data-item"><strong>Yaw (Z-axis) Spins:</strong> <span id="spinZ">0</span></div>
-            <div class="data-item"><strong>Pitch (X-axis) Spins:</strong> <span id="spinX">0</span></div>
+            <div class="data-item"><strong>Pitch (X-axis) Spins:</b> <span id="spinX">0</span></div>
             <div class="data-item"><strong>Roll (Y-axis) Spins:</strong> <span id="spinY">0</span></div>
             <div class="data-item"><strong>Total Spins:</strong> <span id="spinTotal">0</span></div>
         </div>
@@ -172,6 +207,12 @@
                 <h3>Roll (Y-axis) - Gamma</h3>
                 <canvas id="rollGraph"></canvas>
             </div>
+        </div>
+
+        <!-- Container for captured spin graphs -->
+        <div id="capturedSpinsContainer" class="captured-spins-container" style="display: none;">
+            <h2>Captured Spins</h2>
+            <!-- Captured spin graphs will be dynamically added here -->
         </div>
     </div>
 
@@ -198,6 +239,8 @@
         const pitchGraphCtx = pitchGraphCanvas.getContext('2d');
         const rollGraphCtx = rollGraphCanvas.getContext('2d');
 
+        const capturedSpinsContainer = document.getElementById('capturedSpinsContainer');
+
         // State variables for monitoring
         let isMonitoring = false;
 
@@ -216,15 +259,13 @@
         let spinTotalCount = 0;
 
         // History for graphing
-        const MAX_GRAPH_POINTS = 200; // Number of data points to display on the graph
+        const MAX_GRAPH_POINTS = 100; // Number of data points to display on the graph
         let historyAlpha = [];
         let historyBeta = [];
         let historyGamma = [];
 
-        // Store indices where a spin was detected for highlighting on graph
-        let spinEventsAlpha = [];
-        let spinEventsBeta = [];
-        let spinEventsGamma = [];
+        // Store captured spin data (array of objects { type: string, data: [], spinCount: number })
+        let capturedSpins = [];
 
         // --- Utility Functions ---
 
@@ -305,14 +346,11 @@
          * Draws a line graph on the given canvas context.
          * @param {CanvasRenderingContext2D} ctx The canvas 2D rendering context.
          * @param {Array<number>} data The array of angle values to plot.
-         * @param {Array<number>} spinMarks An array of indices where spins occurred.
          * @param {number} minValue The minimum expected value for the angle (e.g., 0 or -180).
          * @param {number} maxValue The maximum expected value for the angle (e.g., 360 or 180).
-         * @param {string} title The title for the graph.
          * @param {string} lineColor The color of the graph line.
-         * @param {string} spinColor The color for spin highlight markers.
          */
-        function drawGraph(ctx, data, spinMarks, minValue, maxValue, lineColor = '#4A90E2', spinColor = '#FF0000') {
+        function drawGraph(ctx, data, minValue, maxValue, lineColor = '#4A90E2') {
             const canvas = ctx.canvas;
             const width = canvas.width;
             const height = canvas.height;
@@ -323,10 +361,13 @@
             // Draw background grid lines (optional, for better readability)
             ctx.strokeStyle = '#e2e8f0';
             ctx.lineWidth = 0.5;
-            // Horizontal lines
-            ctx.beginPath();
-            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2); // Center line
-            ctx.stroke();
+            // Horizontal lines for typical range boundaries
+            const zeroY = height - ((0 - minValue) * (height / (maxValue - minValue)));
+            if (zeroY > 0 && zeroY < height) {
+                ctx.beginPath();
+                ctx.moveTo(0, zeroY); ctx.lineTo(width, zeroY); // Zero line
+                ctx.stroke();
+            }
 
             // Draw the graph line
             ctx.beginPath();
@@ -350,18 +391,6 @@
                 ctx.lineTo(x, y);
             }
             ctx.stroke();
-
-            // Draw spin highlight markers
-            ctx.fillStyle = spinColor;
-            spinMarks.forEach(index => {
-                if (index < data.length) {
-                    const x = index * scaleX;
-                    const y = height - ((data[index] - minValue) * scaleY);
-                    ctx.beginPath();
-                    ctx.arc(x, y, 4, 0, Math.PI * 2); // Draw a circle marker
-                    ctx.fill();
-                }
-            });
         }
 
 
@@ -404,7 +433,8 @@
                 // Update Z-axis (Yaw) spins
                 const resultZ = updateSpinCount(alpha, lastAlpha, cumulativeAlphaRotation, spinZCount);
                 if (resultZ.newSpinDetected) {
-                    spinEventsAlpha.push(historyAlpha.length - 1); // Mark the current point for highlighting
+                    // Capture a copy of the current history for this spin
+                    capturedSpins.push({ type: 'Yaw', data: [...historyAlpha], spinCount: resultZ.spinCount });
                 }
                 cumulativeAlphaRotation = resultZ.cumulativeRotation;
                 spinZCount = resultZ.spinCount;
@@ -413,7 +443,7 @@
                 // Update X-axis (Pitch) spins
                 const resultX = updateSpinCount(beta, lastBeta, cumulativeBetaRotation, spinXCount);
                 if (resultX.newSpinDetected) {
-                    spinEventsBeta.push(historyBeta.length - 1);
+                    capturedSpins.push({ type: 'Pitch', data: [...historyBeta], spinCount: resultX.spinCount });
                 }
                 cumulativeBetaRotation = resultX.cumulativeRotation;
                 spinXCount = resultX.spinCount;
@@ -422,7 +452,7 @@
                 // Update Y-axis (Roll) spins
                 const resultY = updateSpinCount(gamma, lastGamma, cumulativeGammaRotation, spinYCount);
                 if (resultY.newSpinDetected) {
-                    spinEventsGamma.push(historyGamma.length - 1);
+                    capturedSpins.push({ type: 'Roll', data: [...historyGamma], spinCount: resultY.spinCount });
                 }
                 cumulativeGammaRotation = resultY.cumulativeRotation;
                 spinYCount = resultY.spinCount;
@@ -430,13 +460,13 @@
 
                 updateDisplay();
 
-                // Draw graphs
+                // Draw graphs (no spin highlights on live graphs)
                 // Yaw (Alpha): 0-360 degrees
-                drawGraph(yawGraphCtx, historyAlpha, spinEventsAlpha, 0, 360, '#4CAF50', '#FF0000');
+                drawGraph(yawGraphCtx, historyAlpha, 0, 360, '#4CAF50');
                 // Pitch (Beta): -180 to 180 degrees (often effectively -90 to 90 for mobile devices)
-                drawGraph(pitchGraphCtx, historyBeta, spinEventsBeta, -90, 90, '#2196F3', '#FF0000');
+                drawGraph(pitchGraphCtx, historyBeta, -90, 90, '#2196F3');
                 // Roll (Gamma): -90 to 90 degrees
-                drawGraph(rollGraphCtx, historyGamma, spinEventsGamma, -90, 90, '#FFC107', '#FF0000');
+                drawGraph(rollGraphCtx, historyGamma, -90, 90, '#FFC107');
 
             } else {
                 console.warn('DeviceOrientationEvent received but alpha, beta, or gamma is null.');
@@ -450,6 +480,8 @@
         async function requestPermissionsAndStart() {
             startButton.disabled = true; // Disable to prevent multiple clicks
             hideMessage(); // Clear previous messages
+            capturedSpinsContainer.style.display = 'none'; // Hide captured spins section
+            capturedSpinsContainer.innerHTML = '<h2>Captured Spins</h2>'; // Clear previous captured graphs
 
             // Check if DeviceOrientationEvent is supported at all
             if (!window.DeviceOrientationEvent) {
@@ -509,13 +541,11 @@
             spinYCount = 0;
             spinTotalCount = 0;
 
-            // Clear history and spin marks for new monitoring session
+            // Clear history for new monitoring session
             historyAlpha = [];
             historyBeta = [];
             historyGamma = [];
-            spinEventsAlpha = [];
-            spinEventsBeta = [];
-            spinEventsGamma = [];
+            capturedSpins = []; // Clear captured spins from previous session
 
             updateDisplay(); // Clear display immediately
 
@@ -530,7 +560,7 @@
 
 
         /**
-         * Stops monitoring accelerometer and orientation data.
+         * Stops monitoring accelerometer and orientation data and displays captured spins.
          */
         function stopMonitoring() {
             if (!isMonitoring) return;
@@ -545,6 +575,49 @@
             accelXSpan.textContent = '0.00';
             accelYSpan.textContent = '0.00';
             accelZSpan.textContent = '0.00';
+
+            // Clear live graphs
+            yawGraphCtx.clearRect(0, 0, yawGraphCanvas.width, yawGraphCanvas.height);
+            pitchGraphCtx.clearRect(0, 0, pitchGraphCanvas.width, pitchGraphCanvas.height);
+            rollGraphCtx.clearRect(0, 0, rollGraphCanvas.width, rollGraphCanvas.height);
+
+
+            // Display captured spins
+            if (capturedSpins.length > 0) {
+                capturedSpinsContainer.style.display = 'block';
+                capturedSpins.forEach((spin, index) => {
+                    const spinItemDiv = document.createElement('div');
+                    spinItemDiv.className = 'captured-spin-item';
+                    spinItemDiv.innerHTML = `<h4>Spin ${index + 1}: ${spin.type} (Count: ${spin.spinCount})</h4>`;
+
+                    const newCanvas = document.createElement('canvas');
+                    spinItemDiv.appendChild(newCanvas);
+                    capturedSpinsContainer.appendChild(spinItemDiv);
+
+                    const newCtx = newCanvas.getContext('2d');
+                    // Set canvas dimensions explicitly for drawing captured graph
+                    newCanvas.width = newCanvas.offsetWidth;
+                    newCanvas.height = newCanvas.canvas.offsetHeight;
+
+                    let lineColor, minValue, maxValue;
+                    if (spin.type === 'Yaw') {
+                        lineColor = '#4CAF50';
+                        minValue = 0;
+                        maxValue = 360;
+                    } else if (spin.type === 'Pitch') {
+                        lineColor = '#2196F3';
+                        minValue = -90; // Adjust if your pitch/roll can go to -180/180
+                        maxValue = 90;
+                    } else { // Roll
+                        lineColor = '#FFC107';
+                        minValue = -90;
+                        maxValue = 90;
+                    }
+                    drawGraph(newCtx, spin.data, minValue, maxValue, lineColor);
+                });
+            } else {
+                showMessage('Monitoring stopped. No spins were detected during this session.', 'info');
+            }
         }
 
         // --- Event Listeners for Buttons ---
@@ -553,19 +626,21 @@
 
         // --- Initial Canvas Setup (Resizes canvas to match CSS size) ---
         function resizeCanvas() {
+            // Resize live graphs
             yawGraphCanvas.width = yawGraphCanvas.offsetWidth;
             yawGraphCanvas.height = yawGraphCanvas.offsetHeight;
             pitchGraphCanvas.width = pitchGraphCanvas.offsetWidth;
             pitchGraphCanvas.height = pitchGraphCanvas.offsetHeight;
             rollGraphCanvas.width = rollGraphCanvas.offsetWidth;
             rollGraphCanvas.height = rollGraphCanvas.offsetHeight;
-            // Redraw if monitoring is active
+
+            // Redraw live graphs if monitoring is active
             if (isMonitoring) {
-                 drawGraph(yawGraphCtx, historyAlpha, spinEventsAlpha, 0, 360, '#4CAF50', '#FF0000');
-                 drawGraph(pitchGraphCtx, historyBeta, spinEventsBeta, -90, 90, '#2196F3', '#FF0000');
-                 drawGraph(rollGraphCtx, historyGamma, spinEventsGamma, -90, 90, '#FFC107', '#FF0000');
+                 drawGraph(yawGraphCtx, historyAlpha, 0, 360, '#4CAF50');
+                 drawGraph(pitchGraphCtx, historyBeta, -90, 90, '#2196F3');
+                 drawGraph(rollGraphCtx, historyGamma, -90, 90, '#FFC107');
             } else {
-                // Clear canvases if not monitoring and they are resized
+                // Clear live canvases if not monitoring and they are resized
                 yawGraphCtx.clearRect(0,0, yawGraphCanvas.width, yawGraphCanvas.height);
                 pitchGraphCtx.clearRect(0,0, pitchGraphCanvas.width, pitchGraphCanvas.height);
                 rollGraphCtx.clearRect(0,0, rollGraphCanvas.width, rollGraphCanvas.height);
