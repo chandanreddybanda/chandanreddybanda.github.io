@@ -23,7 +23,7 @@
             padding: 32px;
             border-radius: 12px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            max-width: 500px;
+            max-width: 600px; /* Slightly wider to accommodate graphs */
             width: 100%;
             text-align: center;
         }
@@ -104,6 +104,34 @@
             border-color: #ffeeba; /* Medium yellow */
             color: #856404; /* Dark yellow */
         }
+
+        /* Styles for Graphs */
+        .graph-container {
+            margin-top: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+        .graph-item {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .graph-item h3 {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        canvas {
+            width: 100%;
+            height: 150px; /* Fixed height for consistency */
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -130,6 +158,21 @@
             <div class="data-item"><strong>Roll (Y-axis) Spins:</strong> <span id="spinY">0</span></div>
             <div class="data-item"><strong>Total Spins:</strong> <span id="spinTotal">0</span></div>
         </div>
+
+        <div class="graph-container">
+            <div class="graph-item">
+                <h3>Yaw (Z-axis) - Alpha</h3>
+                <canvas id="yawGraph"></canvas>
+            </div>
+            <div class="graph-item">
+                <h3>Pitch (X-axis) - Beta</h3>
+                <canvas id="pitchGraph"></canvas>
+            </div>
+            <div class="graph-item">
+                <h3>Roll (Y-axis) - Gamma</h3>
+                <canvas id="rollGraph"></canvas>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -147,6 +190,14 @@
         const spinYSpan = document.getElementById('spinY');
         const spinTotalSpan = document.getElementById('spinTotal');
 
+        const yawGraphCanvas = document.getElementById('yawGraph');
+        const pitchGraphCanvas = document.getElementById('pitchGraph');
+        const rollGraphCanvas = document.getElementById('rollGraph');
+
+        const yawGraphCtx = yawGraphCanvas.getContext('2d');
+        const pitchGraphCtx = pitchGraphCanvas.getContext('2d');
+        const rollGraphCtx = rollGraphCanvas.getContext('2d');
+
         // State variables for monitoring
         let isMonitoring = false;
 
@@ -163,6 +214,17 @@
         let spinXCount = 0;
         let spinYCount = 0;
         let spinTotalCount = 0;
+
+        // History for graphing
+        const MAX_GRAPH_POINTS = 200; // Number of data points to display on the graph
+        let historyAlpha = [];
+        let historyBeta = [];
+        let historyGamma = [];
+
+        // Store indices where a spin was detected for highlighting on graph
+        let spinEventsAlpha = [];
+        let spinEventsBeta = [];
+        let spinEventsGamma = [];
 
         // --- Utility Functions ---
 
@@ -192,12 +254,13 @@
          * @param {number} lastAngle Previous angle.
          * @param {number} cumulativeRotation Current cumulative rotation.
          * @param {number} spinCount Current spin count.
-         * @returns {object} An object containing updated cumulativeRotation and spinCount.
+         * @returns {object} An object containing updated cumulativeRotation and spinCount, and a boolean indicating if a new spin was detected.
          */
         function updateSpinCount(currentAngle, lastAngle, cumulativeRotation, spinCount) {
+            let newSpinDetected = false;
             if (lastAngle === null) {
                 // Initialize for the first reading
-                return { cumulativeRotation: 0, spinCount: 0 };
+                return { cumulativeRotation: 0, spinCount: 0, newSpinDetected: false };
             }
 
             let delta = currentAngle - lastAngle;
@@ -216,14 +279,16 @@
                 spinCount++;
                 cumulativeRotation -= 360;
                 spinTotalCount++; // Increment total spins
+                newSpinDetected = true;
             }
             while (cumulativeRotation <= -360) {
                 spinCount++;
                 cumulativeRotation += 360;
                 spinTotalCount++; // Increment total spins
+                newSpinDetected = true;
             }
 
-            return { cumulativeRotation, spinCount };
+            return { cumulativeRotation, spinCount, newSpinDetected };
         }
 
         /**
@@ -236,6 +301,70 @@
             spinTotalSpan.textContent = spinTotalCount;
         }
 
+        /**
+         * Draws a line graph on the given canvas context.
+         * @param {CanvasRenderingContext2D} ctx The canvas 2D rendering context.
+         * @param {Array<number>} data The array of angle values to plot.
+         * @param {Array<number>} spinMarks An array of indices where spins occurred.
+         * @param {number} minValue The minimum expected value for the angle (e.g., 0 or -180).
+         * @param {number} maxValue The maximum expected value for the angle (e.g., 360 or 180).
+         * @param {string} title The title for the graph.
+         * @param {string} lineColor The color of the graph line.
+         * @param {string} spinColor The color for spin highlight markers.
+         */
+        function drawGraph(ctx, data, spinMarks, minValue, maxValue, lineColor = '#4A90E2', spinColor = '#FF0000') {
+            const canvas = ctx.canvas;
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw background grid lines (optional, for better readability)
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 0.5;
+            // Horizontal lines
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2); // Center line
+            ctx.stroke();
+
+            // Draw the graph line
+            ctx.beginPath();
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 2;
+
+            const range = maxValue - minValue;
+            const scaleY = height / range;
+            const scaleX = width / MAX_GRAPH_POINTS;
+
+            // Move to the first data point
+            if (data.length > 0) {
+                const y = height - ((data[0] - minValue) * scaleY);
+                ctx.moveTo(0, y);
+            }
+
+            // Draw line connecting data points
+            for (let i = 0; i < data.length; i++) {
+                const x = i * scaleX;
+                const y = height - ((data[i] - minValue) * scaleY);
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Draw spin highlight markers
+            ctx.fillStyle = spinColor;
+            spinMarks.forEach(index => {
+                if (index < data.length) {
+                    const x = index * scaleX;
+                    const y = height - ((data[index] - minValue) * scaleY);
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, Math.PI * 2); // Draw a circle marker
+                    ctx.fill();
+                }
+            });
+        }
+
+
         // --- Event Handlers ---
 
         /**
@@ -243,7 +372,6 @@
          * @param {DeviceMotionEvent} event
          */
         function handleDeviceMotion(event) {
-            // console.log('DeviceMotionEvent received:', event); // Debug log
             if (event.accelerationIncludingGravity) {
                 accelXSpan.textContent = event.accelerationIncludingGravity.x ? event.accelerationIncludingGravity.x.toFixed(2) : '0.00';
                 accelYSpan.textContent = event.accelerationIncludingGravity.y ? event.accelerationIncludingGravity.y.toFixed(2) : '0.00';
@@ -258,32 +386,58 @@
          * @param {DeviceOrientationEvent} event
          */
         function handleDeviceOrientation(event) {
-            // console.log('DeviceOrientationEvent received:', event); // Debug log
-            // Check if absolute (true orientation) or relative (relative to device's start) is available
             const alpha = event.alpha; // Z-axis (yaw)
             const beta = event.beta;   // X-axis (pitch)
             const gamma = event.gamma; // Y-axis (roll)
 
             if (alpha !== null && beta !== null && gamma !== null) {
+                // Update history for graphing
+                historyAlpha.push(alpha);
+                historyBeta.push(beta);
+                historyGamma.push(gamma);
+
+                if (historyAlpha.length > MAX_GRAPH_POINTS) historyAlpha.shift();
+                if (historyBeta.length > MAX_GRAPH_POINTS) historyBeta.shift();
+                if (historyGamma.length > MAX_GRAPH_POINTS) historyGamma.shift();
+
+
                 // Update Z-axis (Yaw) spins
                 const resultZ = updateSpinCount(alpha, lastAlpha, cumulativeAlphaRotation, spinZCount);
+                if (resultZ.newSpinDetected) {
+                    spinEventsAlpha.push(historyAlpha.length - 1); // Mark the current point for highlighting
+                }
                 cumulativeAlphaRotation = resultZ.cumulativeRotation;
                 spinZCount = resultZ.spinCount;
                 lastAlpha = alpha;
 
                 // Update X-axis (Pitch) spins
                 const resultX = updateSpinCount(beta, lastBeta, cumulativeBetaRotation, spinXCount);
+                if (resultX.newSpinDetected) {
+                    spinEventsBeta.push(historyBeta.length - 1);
+                }
                 cumulativeBetaRotation = resultX.cumulativeRotation;
                 spinXCount = resultX.spinCount;
                 lastBeta = beta;
 
                 // Update Y-axis (Roll) spins
                 const resultY = updateSpinCount(gamma, lastGamma, cumulativeGammaRotation, spinYCount);
+                if (resultY.newSpinDetected) {
+                    spinEventsGamma.push(historyGamma.length - 1);
+                }
                 cumulativeGammaRotation = resultY.cumulativeRotation;
                 spinYCount = resultY.spinCount;
                 lastGamma = gamma;
 
                 updateDisplay();
+
+                // Draw graphs
+                // Yaw (Alpha): 0-360 degrees
+                drawGraph(yawGraphCtx, historyAlpha, spinEventsAlpha, 0, 360, '#4CAF50', '#FF0000');
+                // Pitch (Beta): -180 to 180 degrees (often effectively -90 to 90 for mobile devices)
+                drawGraph(pitchGraphCtx, historyBeta, spinEventsBeta, -90, 90, '#2196F3', '#FF0000');
+                // Roll (Gamma): -90 to 90 degrees
+                drawGraph(rollGraphCtx, historyGamma, spinEventsGamma, -90, 90, '#FFC107', '#FF0000');
+
             } else {
                 console.warn('DeviceOrientationEvent received but alpha, beta, or gamma is null.');
             }
@@ -354,12 +508,21 @@
             spinXCount = 0;
             spinYCount = 0;
             spinTotalCount = 0;
+
+            // Clear history and spin marks for new monitoring session
+            historyAlpha = [];
+            historyBeta = [];
+            historyGamma = [];
+            spinEventsAlpha = [];
+            spinEventsBeta = [];
+            spinEventsGamma = [];
+
             updateDisplay(); // Clear display immediately
 
             window.addEventListener('deviceorientation', handleDeviceOrientation);
             window.addEventListener('devicemotion', handleDeviceMotion);
 
-            showMessage('Monitoring started. Move your phone to see sensor data and spin counts.', 'info');
+            showMessage('Monitoring started. Move your phone to see sensor data and spin counts. Graphs will update.', 'info');
             isMonitoring = true;
             startButton.disabled = true;
             stopButton.disabled = false;
@@ -387,6 +550,32 @@
         // --- Event Listeners for Buttons ---
         startButton.addEventListener('click', requestPermissionsAndStart);
         stopButton.addEventListener('click', stopMonitoring);
+
+        // --- Initial Canvas Setup (Resizes canvas to match CSS size) ---
+        function resizeCanvas() {
+            yawGraphCanvas.width = yawGraphCanvas.offsetWidth;
+            yawGraphCanvas.height = yawGraphCanvas.offsetHeight;
+            pitchGraphCanvas.width = pitchGraphCanvas.offsetWidth;
+            pitchGraphCanvas.height = pitchGraphCanvas.offsetHeight;
+            rollGraphCanvas.width = rollGraphCanvas.offsetWidth;
+            rollGraphCanvas.height = rollGraphCanvas.offsetHeight;
+            // Redraw if monitoring is active
+            if (isMonitoring) {
+                 drawGraph(yawGraphCtx, historyAlpha, spinEventsAlpha, 0, 360, '#4CAF50', '#FF0000');
+                 drawGraph(pitchGraphCtx, historyBeta, spinEventsBeta, -90, 90, '#2196F3', '#FF0000');
+                 drawGraph(rollGraphCtx, historyGamma, spinEventsGamma, -90, 90, '#FFC107', '#FF0000');
+            } else {
+                // Clear canvases if not monitoring and they are resized
+                yawGraphCtx.clearRect(0,0, yawGraphCanvas.width, yawGraphCanvas.height);
+                pitchGraphCtx.clearRect(0,0, pitchGraphCanvas.width, pitchGraphCanvas.height);
+                rollGraphCtx.clearRect(0,0, rollGraphCanvas.width, rollGraphCanvas.height);
+            }
+        }
+
+        // Run resize on load and whenever window resizes
+        window.addEventListener('load', resizeCanvas);
+        window.addEventListener('resize', resizeCanvas);
+
 
         // Initial state setup on page load
         updateDisplay();
