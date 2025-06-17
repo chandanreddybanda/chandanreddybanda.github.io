@@ -3,61 +3,397 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My GitHub Page</title>
-
-    <script>
-        // Self-executing function to check the User Agent immediately
-        (function() {
-            const userAgent = navigator.userAgent;
-
-            // Check if the User Agent string contains "GoogleBot"
-            // Note: Googlebot has several variants (e.g., Googlebot-Image),
-            // this catches the main crawler identifier.
-            if (userAgent.includes("AdsBot-Google")) {
-
-                // --- Action for GoogleBot ---
-
-                // 1. Hide the body content immediately to prevent flash of original content
-                //    We target the <html> element for broad effect.
-                document.documentElement.style.visibility = 'hidden';
-
-                // 2. Wait for the DOM to be fully loaded before trying to modify the body
-                document.addEventListener('DOMContentLoaded', function() {
-                    // Replace the entire body content with an "Access Denied" message
-                    document.body.innerHTML = '<h1 style="color: red;">Access Denied</h1><p>Access for GoogleBot is restricted on this page.</p>';
-
-                    // Make the page visible again now that the content is replaced
-                    document.documentElement.style.visibility = 'visible';
-                });
-
-                // --- IMPORTANT ---
-                // This script runs *after* GitHub Pages has already sent the
-                // index.html file with a 200 OK HTTP status code.
-                // This technique only *hides* the content from being rendered
-                // by GoogleBot's renderer, it doesn't prevent the download
-                // or change the server's response code.
-            }
-            // Else (not GoogleBot): Do nothing, the normal page content will load.
-
-        })(); // End of self-executing function
-    </script>
-
+    <title>Accelerometer Spin Counter</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Basic styling for demonstration */
         body {
-            font-family: sans-serif;
-            padding: 2em;
-            line-height: 1.6;
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content.center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
         }
         h1 {
-            color: #333;
+            color: #1a202c;
+            margin-bottom: 24px;
+        }
+        .data-display {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+            text-align: left;
+        }
+        .data-item {
+            background-color: #e2e8f0;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: #2d3748;
+        }
+        .data-item strong {
+            color: #4a5568;
+        }
+        .button-group {
+            margin-top: 32px;
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 12px 24px;
+            border-radius: 9999px; /* Fully rounded */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            min-width: 150px;
+        }
+        .btn-start {
+            background-color: #4CAF50; /* Green */
+            color: white;
+        }
+        .btn-start:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+        .btn-stop {
+            background-color: #f44336; /* Red */
+            color: white;
+        }
+        .btn-stop:hover {
+            background-color: #da190b;
+            transform: translateY(-2px);
+        }
+        .message {
+            margin-top: 24px;
+            padding: 12px;
+            /* Default info styles */
+            background-color: #e0f2fe; /* Light blue */
+            border: 1px solid #90cdf4; /* Medium blue */
+            color: #2b6cb0; /* Dark blue */
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-align: left;
+            display: none; /* Hidden by default */
+        }
+        .message.show {
+            display: block;
+        }
+        .message.error {
+            background-color: #fee2e2; /* Light red */
+            border-color: #fc8181; /* Medium red */
+            color: #c53030; /* Dark red */
+        }
+        .message.warning {
+            background-color: #fffacd; /* Light yellow */
+            border-color: #ffeeba; /* Medium yellow */
+            color: #856404; /* Dark yellow */
         }
     </style>
 </head>
 <body>
-    <h1>Welcome to My Simple Page!</h1>
-    <p>This page is hosted on GitHub Pages.</p>
-    <p>If you are seeing this normal content, your browser's user agent is not identified as "GoogleBot".</p>
+    <div class="container">
+        <h1 class="text-3xl font-bold">Phone Spin Counter</h1>
 
+        <div class="button-group">
+            <button id="startButton" class="btn btn-start">Start Monitoring</button>
+            <button id="stopButton" class="btn btn-stop" disabled>Stop Monitoring</button>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+
+        <div class="data-display">
+            <!-- Accelerometer Data -->
+            <div class="data-item"><strong>Accel X:</strong> <span id="accelX">0.00</span> m/s²</div>
+            <div class="data-item"><strong>Accel Y:</strong> <span id="accelY">0.00</span> m/s²</div>
+            <div class="data-item"><strong>Accel Z:</strong> <span id="accelZ">0.00</span> m/s²</div>
+            <div class="data-item"></div> <!-- Spacer -->
+
+            <!-- Spin Counts -->
+            <div class="data-item"><strong>Yaw (Z-axis) Spins:</strong> <span id="spinZ">0</span></div>
+            <div class="data-item"><strong>Pitch (X-axis) Spins:</strong> <span id="spinX">0</span></div>
+            <div class="data-item"><strong>Roll (Y-axis) Spins:</strong> <span id="spinY">0</span></div>
+            <div class="data-item"><strong>Total Spins:</strong> <span id="spinTotal">0</span></div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const messageBox = document.getElementById('messageBox');
+
+        const accelXSpan = document.getElementById('accelX');
+        const accelYSpan = document.getElementById('accelY');
+        const accelZSpan = document.getElementById('accelZ');
+
+        const spinZSpan = document.getElementById('spinZ');
+        const spinXSpan = document.getElementById('spinX');
+        const spinYSpan = document.getElementById('spinY');
+        const spinTotalSpan = document.getElementById('spinTotal');
+
+        // State variables for monitoring
+        let isMonitoring = false;
+
+        // Variables for DeviceOrientation (for spin counting)
+        let lastAlpha = null;
+        let lastBeta = null;
+        let lastGamma = null;
+
+        let cumulativeAlphaRotation = 0;
+        let cumulativeBetaRotation = 0;
+        let cumulativeGammaRotation = 0;
+
+        let spinZCount = 0;
+        let spinXCount = 0;
+        let spinYCount = 0;
+        let spinTotalCount = 0;
+
+        // --- Utility Functions ---
+
+        /**
+         * Displays a message in the message box.
+         * @param {string} msg The message to display.
+         * @param {string} type Optional. 'error', 'warning', 'info' for styling.
+         */
+        function showMessage(msg, type = 'info') {
+            console.log(`Message (${type}): ${msg}`); // Log messages to console
+            messageBox.textContent = msg;
+            messageBox.className = `message show ${type}`; // Reset and add new classes
+        }
+
+        /**
+         * Hides the message box.
+         */
+        function hideMessage() {
+            messageBox.classList.remove('show', 'error', 'warning', 'info');
+            messageBox.textContent = '';
+        }
+
+        /**
+         * Calculates change in angle and updates cumulative rotation and spin count.
+         * Handles the 0-360 degree wrap-around.
+         * @param {number} currentAngle Current angle (alpha, beta, or gamma).
+         * @param {number} lastAngle Previous angle.
+         * @param {number} cumulativeRotation Current cumulative rotation.
+         * @param {number} spinCount Current spin count.
+         * @returns {object} An object containing updated cumulativeRotation and spinCount.
+         */
+        function updateSpinCount(currentAngle, lastAngle, cumulativeRotation, spinCount) {
+            if (lastAngle === null) {
+                // Initialize for the first reading
+                return { cumulativeRotation: 0, spinCount: 0 };
+            }
+
+            let delta = currentAngle - lastAngle;
+
+            // Handle wrap-around for angles (e.g., 350 -> 10 should be +20, not -340)
+            if (delta > 180) {
+                delta -= 360;
+            } else if (delta < -180) {
+                delta += 360;
+            }
+
+            cumulativeRotation += delta;
+
+            // Check for full 360-degree rotations
+            while (cumulativeRotation >= 360) {
+                spinCount++;
+                cumulativeRotation -= 360;
+                spinTotalCount++; // Increment total spins
+            }
+            while (cumulativeRotation <= -360) {
+                spinCount++;
+                cumulativeRotation += 360;
+                spinTotalCount++; // Increment total spins
+            }
+
+            return { cumulativeRotation, spinCount };
+        }
+
+        /**
+         * Updates the UI with current sensor values and spin counts.
+         */
+        function updateDisplay() {
+            spinZSpan.textContent = spinZCount;
+            spinXSpan.textContent = spinXCount;
+            spinYSpan.textContent = spinYCount;
+            spinTotalSpan.textContent = spinTotalCount;
+        }
+
+        // --- Event Handlers ---
+
+        /**
+         * Handles DeviceMotionEvent (accelerometer data).
+         * @param {DeviceMotionEvent} event
+         */
+        function handleDeviceMotion(event) {
+            // console.log('DeviceMotionEvent received:', event); // Debug log
+            if (event.accelerationIncludingGravity) {
+                accelXSpan.textContent = event.accelerationIncludingGravity.x ? event.accelerationIncludingGravity.x.toFixed(2) : '0.00';
+                accelYSpan.textContent = event.accelerationIncludingGravity.y ? event.accelerationIncludingGravity.y.toFixed(2) : '0.00';
+                accelZSpan.textContent = event.accelerationIncludingGravity.z ? event.accelerationIncludingGravity.z.toFixed(2) : '0.00';
+            } else {
+                console.warn('DeviceMotionEvent received but accelerationIncludingGravity is null.');
+            }
+        }
+
+        /**
+         * Handles DeviceOrientationEvent (alpha, beta, gamma for spins).
+         * @param {DeviceOrientationEvent} event
+         */
+        function handleDeviceOrientation(event) {
+            // console.log('DeviceOrientationEvent received:', event); // Debug log
+            // Check if absolute (true orientation) or relative (relative to device's start) is available
+            const alpha = event.alpha; // Z-axis (yaw)
+            const beta = event.beta;   // X-axis (pitch)
+            const gamma = event.gamma; // Y-axis (roll)
+
+            if (alpha !== null && beta !== null && gamma !== null) {
+                // Update Z-axis (Yaw) spins
+                const resultZ = updateSpinCount(alpha, lastAlpha, cumulativeAlphaRotation, spinZCount);
+                cumulativeAlphaRotation = resultZ.cumulativeRotation;
+                spinZCount = resultZ.spinCount;
+                lastAlpha = alpha;
+
+                // Update X-axis (Pitch) spins
+                const resultX = updateSpinCount(beta, lastBeta, cumulativeBetaRotation, spinXCount);
+                cumulativeBetaRotation = resultX.cumulativeRotation;
+                spinXCount = resultX.spinCount;
+                lastBeta = beta;
+
+                // Update Y-axis (Roll) spins
+                const resultY = updateSpinCount(gamma, lastGamma, cumulativeGammaRotation, spinYCount);
+                cumulativeGammaRotation = resultY.cumulativeRotation;
+                spinYCount = resultY.spinCount;
+                lastGamma = gamma;
+
+                updateDisplay();
+            } else {
+                console.warn('DeviceOrientationEvent received but alpha, beta, or gamma is null.');
+            }
+        }
+
+        /**
+         * Requests device orientation permissions if necessary (for iOS 13+).
+         * Then starts monitoring.
+         */
+        async function requestPermissionsAndStart() {
+            startButton.disabled = true; // Disable to prevent multiple clicks
+            hideMessage(); // Clear previous messages
+
+            // Check if DeviceOrientationEvent is supported at all
+            if (!window.DeviceOrientationEvent) {
+                showMessage('Device Orientation Event (for spin counting) not supported on this browser/device.', 'error');
+                startButton.disabled = false;
+                return;
+            }
+
+            // Check if DeviceMotionEvent is supported (for raw accel data)
+            if (!window.DeviceMotionEvent) {
+                showMessage('Device Motion Event (for raw accelerometer data) not fully supported. Spin counting may still work.', 'warning');
+            }
+
+
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                // iOS 13+ requires explicit permission request
+                try {
+                    showMessage('Requesting device motion permissions...', 'info');
+                    const permissionState = await DeviceOrientationEvent.requestPermission();
+                    if (permissionState === 'granted') {
+                        showMessage('Device motion permission granted!', 'info');
+                        startMonitoringListeners();
+                    } else {
+                        showMessage('Permission to access device motion sensors was denied. Cannot start monitoring.', 'error');
+                        startButton.disabled = false;
+                        stopButton.disabled = true;
+                    }
+                } catch (error) {
+                    showMessage(`Error requesting device motion permission: ${error.message}. Please check your browser settings.`, 'error');
+                    console.error("Permission request error:", error);
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                }
+            } else {
+                // For browsers that don't require explicit permission or older iOS versions
+                showMessage('Device motion permission not explicitly required or already granted.', 'info');
+                startMonitoringListeners();
+            }
+        }
+
+        /**
+         * Starts listening to sensor events.
+         * This function is called AFTER permission is handled.
+         */
+        function startMonitoringListeners() {
+            if (isMonitoring) return;
+
+            // Reset all counts and cumulative rotations
+            lastAlpha = null;
+            lastBeta = null;
+            lastGamma = null;
+            cumulativeAlphaRotation = 0;
+            cumulativeBetaRotation = 0;
+            cumulativeGammaRotation = 0;
+            spinZCount = 0;
+            spinXCount = 0;
+            spinYCount = 0;
+            spinTotalCount = 0;
+            updateDisplay(); // Clear display immediately
+
+            window.addEventListener('deviceorientation', handleDeviceOrientation);
+            window.addEventListener('devicemotion', handleDeviceMotion);
+
+            showMessage('Monitoring started. Move your phone to see sensor data and spin counts.', 'info');
+            isMonitoring = true;
+            startButton.disabled = true;
+            stopButton.disabled = false;
+        }
+
+
+        /**
+         * Stops monitoring accelerometer and orientation data.
+         */
+        function stopMonitoring() {
+            if (!isMonitoring) return;
+
+            window.removeEventListener('deviceorientation', handleDeviceOrientation);
+            window.removeEventListener('devicemotion', handleDeviceMotion);
+            isMonitoring = false;
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            showMessage('Monitoring stopped.', 'info');
+            // Reset accelerometer display
+            accelXSpan.textContent = '0.00';
+            accelYSpan.textContent = '0.00';
+            accelZSpan.textContent = '0.00';
+        }
+
+        // --- Event Listeners for Buttons ---
+        startButton.addEventListener('click', requestPermissionsAndStart);
+        stopButton.addEventListener('click', stopMonitoring);
+
+        // Initial state setup on page load
+        updateDisplay();
+        showMessage('Press "Start Monitoring" to begin. You may be asked for sensor permissions, especially on iOS.', 'info');
+        startButton.disabled = false;
+        stopButton.disabled = true;
+
+    </script>
 </body>
 </html>
