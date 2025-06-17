@@ -2,662 +2,390 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Accelerometer Spin Counter</title>
-    <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    
     <style>
+        /* Custom CSS embedded directly into the HTML file */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8;
-            display: flex;
-            justify-content.center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
+            background-color: #111827; /* bg-gray-900 */
+            color: white;
+            /* Prevent pull-to-refresh on mobile */
+            overscroll-behavior-y: contain;
         }
-        .container {
-            background-color: #ffffff;
-            padding: 32px;
-            border-radius: 12px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            max-width: 600px;
-            width: 100%;
-            text-align: center;
-        }
-        h1 {
-            color: #1a202c;
-            margin-bottom: 24px;
-        }
-        .data-display {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            margin-top: 24px;
-            text-align: left;
-        }
-        .data-item {
-            background-color: #e2e8f0;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            color: #2d3748;
-        }
-        .data-item strong {
-            color: #4a5568;
-        }
-        .button-group {
-            margin-top: 32px;
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-        }
+
         .btn {
-            padding: 12px 24px;
-            border-radius: 9999px; /* Fully rounded */
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
             font-weight: 600;
+            color: white;
+            transition: background-color 0.3s, transform 0.2s;
+            border: none;
             cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            min-width: 150px;
-        }
-        .btn-start {
-            background-color: #4CAF50; /* Green */
-            color: white;
-        }
-        .btn-start:hover {
-            background-color: #45a049;
-            transform: translateY(-2px);
-        }
-        .btn-stop {
-            background-color: #f44336; /* Red */
-            color: white;
-        }
-        .btn-stop:hover {
-            background-color: #da190b;
-            transform: translateY(-2px);
-        }
-        .message {
-            margin-top: 24px;
-            padding: 12px;
-            /* Default info styles */
-            background-color: #e0f2fe; /* Light blue */
-            border: 1px solid #90cdf4; /* Medium blue */
-            color: #2b6cb0; /* Dark blue */
-            border-radius: 8px;
-            font-size: 0.9rem;
-            text-align: left;
-            display: none; /* Hidden by default */
-        }
-        .message.show {
-            display: block;
-        }
-        .message.error {
-            background-color: #fee2e2; /* Light red */
-            border-color: #fc8181; /* Medium red */
-            color: #c53030; /* Dark red */
-        }
-        .message.warning {
-            background-color: #fffacd; /* Light yellow */
-            border-color: #ffeeba; /* Medium yellow */
-            color: #856404; /* Dark yellow */
         }
 
-        /* Styles for Graphs */
-        .graph-container {
-            margin-top: 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            width: 100%;
-        }
-        .graph-item {
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
-        }
-        .graph-item h3 {
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: #2d3748;
-        }
-        canvas {
-            width: 100%;
-            height: 150px; /* Fixed height for consistency */
-            background-color: #f8fafc;
-            border: 1px solid #cbd5e0;
-            border-radius: 4px;
+        .btn:hover {
+            transform: translateY(-2px);
         }
 
-        /* Styles for Captured Spin Graphs */
-        .captured-spins-container {
-            margin-top: 40px;
-            border-top: 1px dashed #cbd5e0;
-            padding-top: 30px;
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Spin detection animation */
+        .spin-detected {
+            animation: pulse-bright 0.6s ease-out;
+        }
+
+        @keyframes pulse-bright {
+            0% {
+                transform: scale(1);
+                text-shadow: 0 0 5px rgba(255, 255, 255, 0);
+            }
+            50% {
+                transform: scale(1.15);
+                text-shadow: 0 0 20px rgba(34, 211, 238, 0.9); /* cyan-400 glow */
+            }
+            100% {
+                transform: scale(1);
+                text-shadow: 0 0 5px rgba(255, 255, 255, 0);
+            }
+        }
+
+        #spin-gallery .spin-card {
+            background-color: #1f2937; /* bg-gray-800 */
+            border-radius: 0.5rem;
+            padding: 0.75rem;
             text-align: center;
+            border: 1px solid #374151; /* border-gray-700 */
         }
-        .captured-spins-container h2 {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #1a202c;
-            margin-bottom: 24px;
-        }
-        .captured-spin-item {
-            background-color: #f0f4f8;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            text-align: left;
-        }
-        .captured-spin-item h4 {
-            font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-        }
-        .captured-spin-item canvas {
+
+        #spin-gallery .spin-card canvas {
             width: 100%;
-            height: 100px; /* Smaller height for captured snippets */
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
+            height: auto;
+            border-radius: 0.25rem;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1 class="text-3xl font-bold">Phone Spin Counter</h1>
+<body class="antialiased">
 
-        <div class="button-group">
-            <button id="startButton" class="btn btn-start">Start Monitoring</button>
-            <button id="stopButton" class="btn btn-stop" disabled>Stop Monitoring</button>
-        </div>
+    <div id="app" class="container mx-auto p-4 max-w-lg">
+        <header class="text-center my-4">
+            <h1 class="text-4xl font-bold text-cyan-400">Spin Counter</h1>
+            <p id="instructions" class="text-gray-400 mt-2 px-4">Press 'Start' and spin your phone to see the magic!</p>
+        </header>
 
-        <div id="messageBox" class="message"></div>
-
-        <div class="data-display">
-            <!-- Accelerometer Data -->
-            <div class="data-item"><strong>Accel X:</strong> <span id="accelX">0.00</span> m/s²</div>
-            <div class="data-item"><strong>Accel Y:</strong> <span id="accelY">0.00</span> m/s²</div>
-            <div class="data-item"><strong>Accel Z:</strong> <span id="accelZ">0.00</span> m/s²</div>
-            <div class="data-item"></div> <!-- Spacer -->
-
-            <!-- Spin Counts -->
-            <div class="data-item"><strong>Yaw (Z-axis) Spins:</strong> <span id="spinZ">0</span></div>
-            <div class="data-item"><strong>Pitch (X-axis) Spins:</b> <span id="spinX">0</span></div>
-            <div class="data-item"><strong>Roll (Y-axis) Spins:</strong> <span id="spinY">0</span></div>
-            <div class="data-item"><strong>Total Spins:</strong> <span id="spinTotal">0</span></div>
-        </div>
-
-        <div class="graph-container">
-            <div class="graph-item">
-                <h3>Yaw (Z-axis) - Alpha</h3>
-                <canvas id="yawGraph"></canvas>
+        <div id="spinCounters" class="grid grid-cols-3 gap-4 text-center my-8">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-400">Yaw (Z)</h2>
+                <p id="yawCount" class="text-5xl font-bold text-white transition-transform duration-200">0</p>
             </div>
-            <div class="graph-item">
-                <h3>Pitch (X-axis) - Beta</h3>
-                <canvas id="pitchGraph"></canvas>
+            <div>
+                <h2 class="text-lg font-semibold text-gray-400">Pitch (X)</h2>
+                <p id="pitchCount" class="text-5xl font-bold text-white transition-transform duration-200">0</p>
             </div>
-            <div class="graph-item">
-                <h3>Roll (Y-axis) - Gamma</h3>
-                <canvas id="rollGraph"></canvas>
+            <div>
+                <h2 class="text-lg font-semibold text-gray-400">Roll (Y)</h2>
+                <p id="rollCount" class="text-5xl font-bold text-white transition-transform duration-200">0</p>
             </div>
         </div>
 
-        <!-- Container for captured spin graphs -->
-        <div id="capturedSpinsContainer" class="captured-spins-container" style="display: none;">
-            <h2>Captured Spins</h2>
-            <!-- Captured spin graphs will be dynamically added here -->
+        <div id="graphsContainer" class="my-6 space-y-4">
+            <div>
+                <label for="yawCanvas" class="text-gray-400">Yaw (Z-axis)</label>
+                <canvas id="yawCanvas" class="w-full h-24 bg-gray-800 rounded-lg"></canvas>
+            </div>
+            <div>
+                <label for="pitchCanvas" class="text-gray-400">Pitch (X-axis)</label>
+                <canvas id="pitchCanvas" class="w-full h-24 bg-gray-800 rounded-lg"></canvas>
+            </div>
+            <div>
+                <label for="rollCanvas" class="text-gray-400">Roll (Y-axis)</label>
+                <canvas id="rollCanvas" class="w-full h-24 bg-gray-800 rounded-lg"></canvas>
+            </div>
         </div>
+        
+        <div id="controls" class="flex justify-center gap-4 my-6">
+            <button id="startBtn" class="btn bg-green-500 hover:bg-green-600">Start Monitoring</button>
+            <button id="stopBtn" class="btn bg-red-500 hover:bg-red-600 hidden">Stop Monitoring</button>
+        </div>
+
+        <div id="results" class="hidden">
+            <div id="capturedSpinsContainer" class="my-6">
+                <h3 class="text-2xl font-bold text-center text-cyan-400 mb-4">Captured Spins</h3>
+                <div id="spin-gallery" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+            </div>
+            <div class="text-center">
+                <button id="shareBtn" class="btn bg-blue-500 hover:bg-blue-600">Share Results</button>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // DOM Elements
-        const startButton = document.getElementById('startButton');
-        const stopButton = document.getElementById('stopButton');
-        const messageBox = document.getElementById('messageBox');
+        // JavaScript logic embedded directly into the HTML file
+        document.addEventListener('DOMContentLoaded', () => {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const shareBtn = document.getElementById('shareBtn');
+            
+            const yawCountEl = document.getElementById('yawCount');
+            const pitchCountEl = document.getElementById('pitchCount');
+            const rollCountEl = document.getElementById('rollCount');
 
-        const accelXSpan = document.getElementById('accelX');
-        const accelYSpan = document.getElementById('accelY');
-        const accelZSpan = document.getElementById('accelZ');
+            const canvases = {
+                yaw: document.getElementById('yawCanvas'),
+                pitch: document.getElementById('pitchCanvas'),
+                roll: document.getElementById('rollCanvas'),
+            };
 
-        const spinZSpan = document.getElementById('spinZ');
-        const spinXSpan = document.getElementById('spinX');
-        const spinYSpan = document.getElementById('spinY');
-        const spinTotalSpan = document.getElementById('spinTotal');
+            const contexts = {
+                yaw: canvases.yaw.getContext('2d'),
+                pitch: canvases.pitch.getContext('2d'),
+                roll: canvases.roll.getContext('2d'),
+            };
 
-        const yawGraphCanvas = document.getElementById('yawGraph');
-        const pitchGraphCanvas = document.getElementById('pitchGraph');
-        const rollGraphCanvas = document.getElementById('rollGraph');
+            const capturedSpinsContainer = document.getElementById('spin-gallery');
+            const resultsSection = document.getElementById('results');
 
-        const yawGraphCtx = yawGraphCanvas.getContext('2d');
-        const pitchGraphCtx = pitchGraphCanvas.getContext('2d');
-        const rollGraphCtx = rollGraphCanvas.getContext('2d');
+            let monitoring = false;
+            let counts = { yaw: 0, pitch: 0, roll: 0 };
+            let lastAngles = { yaw: null, pitch: null, roll: null };
+            let history = { yaw: [], pitch: [], roll: [] };
+            const historyLength = 100;
 
-        const capturedSpinsContainer = document.getElementById('capturedSpinsContainer');
+            const setupCanvas = (canvas, context) => {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                context.scale(dpr, dpr);
+                context.lineWidth = 2;
+                context.strokeStyle = '#22d3ee'; // cyan-400
+            };
 
-        // State variables for monitoring
-        let isMonitoring = false;
+            Object.values(canvases).forEach((canvas, index) => {
+                setupCanvas(canvas, Object.values(contexts)[index]);
+            });
+            
+            const resetState = () => {
+                monitoring = false;
+                counts = { yaw: 0, pitch: 0, roll: 0 };
+                lastAngles = { yaw: null, pitch: null, roll: null };
+                history = { yaw: [], pitch: [], roll: [] };
+                
+                yawCountEl.textContent = '0';
+                pitchCountEl.textContent = '0';
+                rollCountEl.textContent = '0';
 
-        // Variables for DeviceOrientation (for spin counting)
-        let lastAlpha = null;
-        let lastBeta = null;
-        let lastGamma = null;
-
-        let cumulativeAlphaRotation = 0;
-        let cumulativeBetaRotation = 0;
-        let cumulativeGammaRotation = 0;
-
-        let spinZCount = 0;
-        let spinXCount = 0;
-        let spinYCount = 0;
-        let spinTotalCount = 0;
-
-        // History for graphing
-        const MAX_GRAPH_POINTS = 100; // Number of data points to display on the graph
-        let historyAlpha = [];
-        let historyBeta = [];
-        let historyGamma = [];
-
-        // Store captured spin data (array of objects { type: string, data: [], spinCount: number })
-        let capturedSpins = [];
-
-        // --- Utility Functions ---
-
-        /**
-         * Displays a message in the message box.
-         * @param {string} msg The message to display.
-         * @param {string} type Optional. 'error', 'warning', 'info' for styling.
-         */
-        function showMessage(msg, type = 'info') {
-            console.log(`Message (${type}): ${msg}`); // Log messages to console
-            messageBox.textContent = msg;
-            messageBox.className = `message show ${type}`; // Reset and add new classes
-        }
-
-        /**
-         * Hides the message box.
-         */
-        function hideMessage() {
-            messageBox.classList.remove('show', 'error', 'warning', 'info');
-            messageBox.textContent = '';
-        }
-
-        /**
-         * Calculates change in angle and updates cumulative rotation and spin count.
-         * Handles the 0-360 degree wrap-around.
-         * @param {number} currentAngle Current angle (alpha, beta, or gamma).
-         * @param {number} lastAngle Previous angle.
-         * @param {number} cumulativeRotation Current cumulative rotation.
-         * @param {number} spinCount Current spin count.
-         * @returns {object} An object containing updated cumulativeRotation and spinCount, and a boolean indicating if a new spin was detected.
-         */
-        function updateSpinCount(currentAngle, lastAngle, cumulativeRotation, spinCount) {
-            let newSpinDetected = false;
-            if (lastAngle === null) {
-                // Initialize for the first reading
-                return { cumulativeRotation: 0, spinCount: 0, newSpinDetected: false };
-            }
-
-            let delta = currentAngle - lastAngle;
-
-            // Handle wrap-around for angles (e.g., 350 -> 10 should be +20, not -340)
-            if (delta > 180) {
-                delta -= 360;
-            } else if (delta < -180) {
-                delta += 360;
-            }
-
-            cumulativeRotation += delta;
-
-            // Check for full 360-degree rotations
-            while (cumulativeRotation >= 360) {
-                spinCount++;
-                cumulativeRotation -= 360;
-                spinTotalCount++; // Increment total spins
-                newSpinDetected = true;
-            }
-            while (cumulativeRotation <= -360) {
-                spinCount++;
-                cumulativeRotation += 360;
-                spinTotalCount++; // Increment total spins
-                newSpinDetected = true;
-            }
-
-            return { cumulativeRotation, spinCount, newSpinDetected };
-        }
-
-        /**
-         * Updates the UI with current sensor values and spin counts.
-         */
-        function updateDisplay() {
-            spinZSpan.textContent = spinZCount;
-            spinXSpan.textContent = spinXCount;
-            spinYSpan.textContent = spinYCount;
-            spinTotalSpan.textContent = spinTotalCount;
-        }
-
-        /**
-         * Draws a line graph on the given canvas context.
-         * @param {CanvasRenderingContext2D} ctx The canvas 2D rendering context.
-         * @param {Array<number>} data The array of angle values to plot.
-         * @param {number} minValue The minimum expected value for the angle (e.g., 0 or -180).
-         * @param {number} maxValue The maximum expected value for the angle (e.g., 360 or 180).
-         * @param {string} lineColor The color of the graph line.
-         */
-        function drawGraph(ctx, data, minValue, maxValue, lineColor = '#4A90E2') {
-            const canvas = ctx.canvas;
-            const width = canvas.width;
-            const height = canvas.height;
-
-            // Clear canvas
-            ctx.clearRect(0, 0, width, height);
-
-            // Draw background grid lines (optional, for better readability)
-            ctx.strokeStyle = '#e2e8f0';
-            ctx.lineWidth = 0.5;
-            // Horizontal lines for typical range boundaries
-            const zeroY = height - ((0 - minValue) * (height / (maxValue - minValue)));
-            if (zeroY > 0 && zeroY < height) {
-                ctx.beginPath();
-                ctx.moveTo(0, zeroY); ctx.lineTo(width, zeroY); // Zero line
-                ctx.stroke();
-            }
-
-            // Draw the graph line
-            ctx.beginPath();
-            ctx.strokeStyle = lineColor;
-            ctx.lineWidth = 2;
-
-            const range = maxValue - minValue;
-            const scaleY = height / range;
-            const scaleX = width / MAX_GRAPH_POINTS;
-
-            // Move to the first data point
-            if (data.length > 0) {
-                const y = height - ((data[0] - minValue) * scaleY);
-                ctx.moveTo(0, y);
-            }
-
-            // Draw line connecting data points
-            for (let i = 0; i < data.length; i++) {
-                const x = i * scaleX;
-                const y = height - ((data[i] - minValue) * scaleY);
-                ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-        }
-
-
-        // --- Event Handlers ---
-
-        /**
-         * Handles DeviceMotionEvent (accelerometer data).
-         * @param {DeviceMotionEvent} event
-         */
-        function handleDeviceMotion(event) {
-            if (event.accelerationIncludingGravity) {
-                accelXSpan.textContent = event.accelerationIncludingGravity.x ? event.accelerationIncludingGravity.x.toFixed(2) : '0.00';
-                accelYSpan.textContent = event.accelerationIncludingGravity.y ? event.accelerationIncludingGravity.y.toFixed(2) : '0.00';
-                accelZSpan.textContent = event.accelerationIncludingGravity.z ? event.accelerationIncludingGravity.z.toFixed(2) : '0.00';
-            } else {
-                console.warn('DeviceMotionEvent received but accelerationIncludingGravity is null.');
-            }
-        }
-
-        /**
-         * Handles DeviceOrientationEvent (alpha, beta, gamma for spins).
-         * @param {DeviceOrientationEvent} event
-         */
-        function handleDeviceOrientation(event) {
-            const alpha = event.alpha; // Z-axis (yaw)
-            const beta = event.beta;   // X-axis (pitch)
-            const gamma = event.gamma; // Y-axis (roll)
-
-            if (alpha !== null && beta !== null && gamma !== null) {
-                // Update history for graphing
-                historyAlpha.push(alpha);
-                historyBeta.push(beta);
-                historyGamma.push(gamma);
-
-                if (historyAlpha.length > MAX_GRAPH_POINTS) historyAlpha.shift();
-                if (historyBeta.length > MAX_GRAPH_POINTS) historyBeta.shift();
-                if (historyGamma.length > MAX_GRAPH_POINTS) historyGamma.shift();
-
-
-                // Update Z-axis (Yaw) spins
-                const resultZ = updateSpinCount(alpha, lastAlpha, cumulativeAlphaRotation, spinZCount);
-                if (resultZ.newSpinDetected) {
-                    // Capture a copy of the current history for this spin
-                    capturedSpins.push({ type: 'Yaw', data: [...historyAlpha], spinCount: resultZ.spinCount });
-                }
-                cumulativeAlphaRotation = resultZ.cumulativeRotation;
-                spinZCount = resultZ.spinCount;
-                lastAlpha = alpha;
-
-                // Update X-axis (Pitch) spins
-                const resultX = updateSpinCount(beta, lastBeta, cumulativeBetaRotation, spinXCount);
-                if (resultX.newSpinDetected) {
-                    capturedSpins.push({ type: 'Pitch', data: [...historyBeta], spinCount: resultX.spinCount });
-                }
-                cumulativeBetaRotation = resultX.cumulativeRotation;
-                spinXCount = resultX.spinCount;
-                lastBeta = beta;
-
-                // Update Y-axis (Roll) spins
-                const resultY = updateSpinCount(gamma, lastGamma, cumulativeGammaRotation, spinYCount);
-                if (resultY.newSpinDetected) {
-                    capturedSpins.push({ type: 'Roll', data: [...historyGamma], spinCount: resultY.spinCount });
-                }
-                cumulativeGammaRotation = resultY.cumulativeRotation;
-                spinYCount = resultY.spinCount;
-                lastGamma = gamma;
-
-                updateDisplay();
-
-                // Draw graphs (no spin highlights on live graphs)
-                // Yaw (Alpha): 0-360 degrees
-                drawGraph(yawGraphCtx, historyAlpha, 0, 360, '#4CAF50');
-                // Pitch (Beta): -180 to 180 degrees (often effectively -90 to 90 for mobile devices)
-                drawGraph(pitchGraphCtx, historyBeta, -90, 90, '#2196F3');
-                // Roll (Gamma): -90 to 90 degrees
-                drawGraph(rollGraphCtx, historyGamma, -90, 90, '#FFC107');
-
-            } else {
-                console.warn('DeviceOrientationEvent received but alpha, beta, or gamma is null.');
-            }
-        }
-
-        /**
-         * Requests device orientation permissions if necessary (for iOS 13+).
-         * Then starts monitoring.
-         */
-        async function requestPermissionsAndStart() {
-            startButton.disabled = true; // Disable to prevent multiple clicks
-            hideMessage(); // Clear previous messages
-            capturedSpinsContainer.style.display = 'none'; // Hide captured spins section
-            capturedSpinsContainer.innerHTML = '<h2>Captured Spins</h2>'; // Clear previous captured graphs
-
-            // Check if DeviceOrientationEvent is supported at all
-            if (!window.DeviceOrientationEvent) {
-                showMessage('Device Orientation Event (for spin counting) not supported on this browser/device.', 'error');
-                startButton.disabled = false;
-                return;
-            }
-
-            // Check if DeviceMotionEvent is supported (for raw accel data)
-            if (!window.DeviceMotionEvent) {
-                showMessage('Device Motion Event (for raw accelerometer data) not fully supported. Spin counting may still work.', 'warning');
-            }
-
-
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                // iOS 13+ requires explicit permission request
-                try {
-                    showMessage('Requesting device motion permissions...', 'info');
-                    const permissionState = await DeviceOrientationEvent.requestPermission();
-                    if (permissionState === 'granted') {
-                        showMessage('Device motion permission granted!', 'info');
-                        startMonitoringListeners();
-                    } else {
-                        showMessage('Permission to access device motion sensors was denied. Cannot start monitoring.', 'error');
-                        startButton.disabled = false;
-                        stopButton.disabled = true;
-                    }
-                } catch (error) {
-                    showMessage(`Error requesting device motion permission: ${error.message}. Please check your browser settings.`, 'error');
-                    console.error("Permission request error:", error);
-                    startButton.disabled = false;
-                    stopButton.disabled = true;
-                }
-            } else {
-                // For browsers that don't require explicit permission or older iOS versions
-                showMessage('Device motion permission not explicitly required or already granted.', 'info');
-                startMonitoringListeners();
-            }
-        }
-
-        /**
-         * Starts listening to sensor events.
-         * This function is called AFTER permission is handled.
-         */
-        function startMonitoringListeners() {
-            if (isMonitoring) return;
-
-            // Reset all counts and cumulative rotations
-            lastAlpha = null;
-            lastBeta = null;
-            lastGamma = null;
-            cumulativeAlphaRotation = 0;
-            cumulativeBetaRotation = 0;
-            cumulativeGammaRotation = 0;
-            spinZCount = 0;
-            spinXCount = 0;
-            spinYCount = 0;
-            spinTotalCount = 0;
-
-            // Clear history for new monitoring session
-            historyAlpha = [];
-            historyBeta = [];
-            historyGamma = [];
-            capturedSpins = []; // Clear captured spins from previous session
-
-            updateDisplay(); // Clear display immediately
-
-            window.addEventListener('deviceorientation', handleDeviceOrientation);
-            window.addEventListener('devicemotion', handleDeviceMotion);
-
-            showMessage('Monitoring started. Move your phone to see sensor data and spin counts. Graphs will update.', 'info');
-            isMonitoring = true;
-            startButton.disabled = true;
-            stopButton.disabled = false;
-        }
-
-
-        /**
-         * Stops monitoring accelerometer and orientation data and displays captured spins.
-         */
-        function stopMonitoring() {
-            if (!isMonitoring) return;
-
-            window.removeEventListener('deviceorientation', handleDeviceOrientation);
-            window.removeEventListener('devicemotion', handleDeviceMotion);
-            isMonitoring = false;
-            startButton.disabled = false;
-            stopButton.disabled = true;
-            showMessage('Monitoring stopped.', 'info');
-            // Reset accelerometer display
-            accelXSpan.textContent = '0.00';
-            accelYSpan.textContent = '0.00';
-            accelZSpan.textContent = '0.00';
-
-            // Clear live graphs
-            yawGraphCtx.clearRect(0, 0, yawGraphCanvas.width, yawGraphCanvas.height);
-            pitchGraphCtx.clearRect(0, 0, pitchGraphCanvas.width, pitchGraphCanvas.height);
-            rollGraphCtx.clearRect(0, 0, rollGraphCanvas.width, rollGraphCanvas.height);
-
-
-            // Display captured spins
-            if (capturedSpins.length > 0) {
-                capturedSpinsContainer.style.display = 'block';
-                capturedSpins.forEach((spin, index) => {
-                    const spinItemDiv = document.createElement('div');
-                    spinItemDiv.className = 'captured-spin-item';
-                    spinItemDiv.innerHTML = `<h4>Spin ${index + 1}: ${spin.type} (Count: ${spin.spinCount})</h4>`;
-
-                    const newCanvas = document.createElement('canvas');
-                    spinItemDiv.appendChild(newCanvas);
-                    capturedSpinsContainer.appendChild(spinItemDiv);
-
-                    const newCtx = newCanvas.getContext('2d');
-                    // Set canvas dimensions explicitly for drawing captured graph
-                    newCanvas.width = newCanvas.offsetWidth;
-                    newCanvas.height = newCanvas.canvas.offsetHeight;
-
-                    let lineColor, minValue, maxValue;
-                    if (spin.type === 'Yaw') {
-                        lineColor = '#4CAF50';
-                        minValue = 0;
-                        maxValue = 360;
-                    } else if (spin.type === 'Pitch') {
-                        lineColor = '#2196F3';
-                        minValue = -90; // Adjust if your pitch/roll can go to -180/180
-                        maxValue = 90;
-                    } else { // Roll
-                        lineColor = '#FFC107';
-                        minValue = -90;
-                        maxValue = 90;
-                    }
-                    drawGraph(newCtx, spin.data, minValue, maxValue, lineColor);
+                Object.values(contexts).forEach(ctx => {
+                    const canvas = ctx.canvas;
+                    const rect = canvas.getBoundingClientRect();
+                    ctx.clearRect(0, 0, rect.width, rect.height);
                 });
-            } else {
-                showMessage('Monitoring stopped. No spins were detected during this session.', 'info');
-            }
-        }
+                
+                capturedSpinsContainer.innerHTML = '';
+                resultsSection.classList.add('hidden');
+                stopBtn.classList.add('hidden');
+                startBtn.classList.remove('hidden');
+            };
 
-        // --- Event Listeners for Buttons ---
-        startButton.addEventListener('click', requestPermissionsAndStart);
-        stopButton.addEventListener('click', stopMonitoring);
+            const handleOrientation = (event) => {
+                if (!monitoring) return;
 
-        // --- Initial Canvas Setup (Resizes canvas to match CSS size) ---
-        function resizeCanvas() {
-            // Resize live graphs
-            yawGraphCanvas.width = yawGraphCanvas.offsetWidth;
-            yawGraphCanvas.height = yawGraphCanvas.offsetHeight;
-            pitchGraphCanvas.width = pitchGraphCanvas.offsetWidth;
-            pitchGraphCanvas.height = pitchGraphCanvas.offsetHeight;
-            rollGraphCanvas.width = rollGraphCanvas.offsetWidth;
-            rollGraphCanvas.height = rollGraphCanvas.offsetHeight;
+                // Normalize angles to be non-null
+                const alpha = event.alpha || 0; // Yaw
+                const beta = event.beta || 0;   // Pitch
+                const gamma = event.gamma || 0; // Roll
+                
+                updateLiveGraph('yaw', alpha, 360);
+                updateLiveGraph('pitch', beta, 180);
+                updateLiveGraph('roll', gamma, 180); // Roll range is -90 to 90, so total 180
 
-            // Redraw live graphs if monitoring is active
-            if (isMonitoring) {
-                 drawGraph(yawGraphCtx, historyAlpha, 0, 360, '#4CAF50');
-                 drawGraph(pitchGraphCtx, historyBeta, -90, 90, '#2196F3');
-                 drawGraph(rollGraphCtx, historyGamma, -90, 90, '#FFC107');
-            } else {
-                // Clear live canvases if not monitoring and they are resized
-                yawGraphCtx.clearRect(0,0, yawGraphCanvas.width, yawGraphCanvas.height);
-                pitchGraphCtx.clearRect(0,0, pitchGraphCanvas.width, pitchGraphCanvas.height);
-                rollGraphCtx.clearRect(0,0, rollGraphCanvas.width, rollGraphCanvas.height);
-            }
-        }
+                detectSpin('yaw', alpha, 360, yawCountEl);
+                detectSpin('pitch', beta, 180, pitchCountEl);
+                detectSpin('roll', gamma, 180, rollCountEl);
+            };
 
-        // Run resize on load and whenever window resizes
-        window.addEventListener('load', resizeCanvas);
-        window.addEventListener('resize', resizeCanvas);
+            const detectSpin = (axis, currentValue, range, element) => {
+                if (lastAngles[axis] === null) {
+                    lastAngles[axis] = currentValue;
+                    return;
+                }
 
+                const diff = Math.abs(currentValue - lastAngles[axis]);
 
-        // Initial state setup on page load
-        updateDisplay();
-        showMessage('Press "Start Monitoring" to begin. You may be asked for sensor permissions, especially on iOS.', 'info');
-        startButton.disabled = false;
-        stopButton.disabled = true;
+                // Detect a spin when the value wraps around the range
+                // e.g., for Yaw (0-360), a jump from 350 to 10 is a spin
+                if (diff > range * 0.8) { 
+                    counts[axis]++;
+                    element.textContent = counts[axis];
+                    element.classList.add('spin-detected');
+                    setTimeout(() => element.classList.remove('spin-detected'), 600);
+                    
+                    // Capture the spin data and celebrate milestones
+                    captureSpin(axis, [...history[axis]]); // Pass a copy of the history
+                    const totalSpins = counts.yaw + counts.pitch + counts.roll;
+                    if (totalSpins > 0 && totalSpins % 5 === 0) {
+                        triggerConfetti();
+                    }
+                }
+                lastAngles[axis] = currentValue;
+            };
+            
+            const updateLiveGraph = (axis, value, maxRange) => {
+                const data = history[axis];
+                data.push(value);
+                if (data.length > historyLength) {
+                    data.shift();
+                }
 
+                const context = contexts[axis];
+                const canvas = canvases[axis];
+                const { width, height } = canvas.getBoundingClientRect();
+                
+                context.clearRect(0, 0, width, height);
+                context.beginPath();
+                
+                data.forEach((point, i) => {
+                    // Normalize point based on axis range
+                    let normalizedPoint = point;
+                    if (axis === 'pitch') normalizedPoint += 90; // Shift -90 to 90 range to 0 to 180
+                    if (axis === 'roll') normalizedPoint += 90; // Shift -90 to 90 range to 0 to 180
+                    
+                    const x = (i / (historyLength - 1)) * width;
+                    const y = height - ((normalizedPoint / maxRange) * height);
+
+                    if (i === 0) {
+                        context.moveTo(x, y);
+                    } else {
+                        context.lineTo(x, y);
+                    }
+                });
+                context.stroke();
+            };
+
+            const captureSpin = (axis, data) => {
+                const card = document.createElement('div');
+                card.className = 'spin-card';
+                
+                const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                card.innerHTML = `
+                    <p class="font-semibold text-cyan-400">${axis.charAt(0).toUpperCase() + axis.slice(1)} Spin #${counts[axis]}</p>
+                    <p class="text-xs text-gray-500">${timestamp}</p>
+                `;
+
+                const canvas = document.createElement('canvas');
+                card.appendChild(canvas);
+                capturedSpinsContainer.appendChild(card);
+                
+                drawCapturedGraph(canvas, data, axis);
+            };
+
+            const drawCapturedGraph = (canvas, data, axis) => {
+                const context = canvas.getContext('2d');
+                setupCanvas(canvas, context);
+                context.strokeStyle = '#a78bfa'; // violet-400
+
+                const { width, height } = canvas.getBoundingClientRect();
+                context.clearRect(0, 0, width, height);
+                context.beginPath();
+
+                let maxRange = 360;
+                if (axis === 'pitch' || axis === 'roll') maxRange = 180;
+
+                data.forEach((point, i) => {
+                    let normalizedPoint = point;
+                    if (axis === 'pitch' || axis === 'roll') normalizedPoint += 90;
+                    
+                    const x = (i / (data.length - 1)) * width;
+                    const y = height - ((normalizedPoint / maxRange) * height);
+
+                    if (i === 0) {
+                        context.moveTo(x, y);
+                    } else {
+                        context.lineTo(x, y);
+                    }
+                });
+                context.stroke();
+            };
+
+            const triggerConfetti = () => {
+                if (window.confetti) {
+                    confetti({
+                        particleCount: 150,
+                        spread: 90,
+                        origin: { y: 0.6 }
+                    });
+                }
+            };
+            
+            const startMonitoring = () => {
+                resetState();
+                monitoring = true;
+                startBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+                document.getElementById('instructions').textContent = "Spin away! Let's see what you've got.";
+                window.addEventListener('deviceorientation', handleOrientation);
+            };
+
+            startBtn.addEventListener('click', () => {
+                // Request permission for iOS 13+ devices
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    DeviceOrientationEvent.requestPermission()
+                        .then(permissionState => {
+                            if (permissionState === 'granted') {
+                                startMonitoring();
+                            } else {
+                                alert('Permission to access device orientation was denied.');
+                            }
+                        })
+                        .catch(console.error);
+                } else {
+                    // Handle non-iOS 13+ devices
+                    startMonitoring();
+                }
+            });
+
+            stopBtn.addEventListener('click', () => {
+                monitoring = false;
+                window.removeEventListener('deviceorientation', handleOrientation);
+                stopBtn.classList.add('hidden');
+                startBtn.classList.remove('hidden');
+                
+                const totalSpins = counts.yaw + counts.pitch + counts.roll;
+                if (totalSpins > 0) {
+                    resultsSection.classList.remove('hidden');
+                }
+                document.getElementById('instructions').textContent = "Great job! Press 'Start' to go again.";
+            });
+            
+            shareBtn.addEventListener('click', () => {
+                const totalSpins = counts.yaw + counts.pitch + counts.roll;
+                const shareData = {
+                    title: 'Spin Counter Results',
+                    text: `I just did ${totalSpins} total spins! (Yaw: ${counts.yaw}, Pitch: ${counts.pitch}, Roll: ${counts.roll}). Can you beat me?`,
+                    url: window.location.href
+                };
+
+                if (navigator.share) {
+                    navigator.share(shareData).catch(console.error);
+                } else {
+                    // Fallback for desktop or unsupported browsers
+                    alert('Share functionality is not supported on this browser. Try on a mobile device!');
+                }
+            });
+
+            // Initial state setup
+            resetState();
+        });
     </script>
 </body>
 </html>
