@@ -2,371 +2,143 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Accurate Spin Counter</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 2025 Race Calendar Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
-        /* CSS is embedded directly into the HTML file */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #111827; /* bg-gray-900 */
-            color: white;
-            overscroll-behavior-y: contain; /* Prevents pull-to-refresh interference */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
         }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            color: white;
-            transition: background-color 0.3s, transform 0.2s;
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .spin-detected {
-            animation: pulse-bright 0.6s ease-out;
-        }
-
-        @keyframes pulse-bright {
-            0% {
-                transform: scale(1);
-                text-shadow: 0 0 5px rgba(255, 255, 255, 0);
-            }
-            50% {
-                transform: scale(1.15);
-                text-shadow: 0 0 20px rgba(34, 211, 238, 0.9); /* cyan-400 glow */
-            }
-            100% {
-                transform: scale(1);
-                text-shadow: 0 0 5px rgba(255, 255, 255, 0);
-            }
-        }
-
-        #spin-gallery .spin-card {
-            background-color: #1f2937; /* bg-gray-800 */
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            text-align: center;
-            border: 1px solid #374151; /* border-gray-700 */
-        }
-
-        #spin-gallery .spin-card canvas {
+        #map {
+            height: 100vh;
             width: 100%;
-            height: auto;
-            border-radius: 0.25rem;
-            margin-top: 0.5rem;
+        }
+        .leaflet-popup-content-wrapper {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .leaflet-popup-content {
+            margin: 15px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .leaflet-popup-content h3 {
+            margin: 0 0 10px;
+            font-size: 18px;
+            color: #d90429;
+        }
+        .leaflet-popup-content p {
+            margin: 5px 0;
+        }
+        .leaflet-popup-content a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .leaflet-popup-content a:hover {
+            text-decoration: underline;
+        }
+        .leaflet-popup-tip {
+            background: #ffffff;
+        }
+        .marker-icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
         }
     </style>
 </head>
-<body class="antialiased">
+<body>
 
-    <div id="app" class="container mx-auto p-4 max-w-lg">
-        <header class="text-center my-4">
-            <h1 class="text-4xl font-bold text-cyan-400">Accurate Spin Counter</h1>
-            <p id="instructions" class="text-gray-400 mt-2 px-4">Press 'Start' and spin your phone to see the magic!</p>
-        </header>
+<div id="map"></div>
 
-        <div id="spinCounters" class="grid grid-cols-3 gap-4 text-center my-8">
-            <div>
-                <h2 class="text-lg font-semibold text-gray-400">Yaw (Spin)</h2>
-                <p id="yawCount" class="text-5xl font-bold text-white transition-transform duration-200">0</p>
-            </div>
-            <div>
-                <h2 class="text-lg font-semibold text-gray-400">Pitch (Flip)</h2>
-                <p id="pitchCount" class="text-5xl font-bold text-white transition-transform duration-200">0</p>
-            </div>
-            <div>
-                <h2 class="text-lg font-semibold text-gray-400">Roll (Roll)</h2>
-                <p id="rollCount" class="text-5xl font-bold text-white transition-transform duration-200">0</p>
-            </div>
-        </div>
+<script>
+    // --- Map Initialization ---
+    const map = L.map('map').setView([20, 15], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(map);
 
-        <div id="graphsContainer" class="my-6 space-y-4">
-            <div>
-                <label class="text-gray-400">Yaw (Z-axis)</label>
-                <canvas id="yawCanvas" class="w-full h-24 bg-gray-800 rounded-lg"></canvas>
-            </div>
-            <div>
-                <label class="text-gray-400">Pitch (X-axis)</label>
-                <canvas id="pitchCanvas" class="w-full h-24 bg-gray-800 rounded-lg"></canvas>
-            </div>
-            <div>
-                <label class="text-gray-400">Roll (Y-axis)</label>
-                <canvas id="rollCanvas" class="w-full h-24 bg-gray-800 rounded-lg"></canvas>
-            </div>
-        </div>
-        
-        <div id="controls" class="flex justify-center gap-4 my-6">
-            <button id="startBtn" class="btn bg-green-500 hover:bg-green-600">Start Monitoring</button>
-            <button id="stopBtn" class="btn bg-red-500 hover:bg-red-600 hidden">Stop Monitoring</button>
-        </div>
+    // --- F1 2025 Race Data ---
+    const races = [
+        { name: "Australian Grand Prix", city: "Melbourne", date: "2025-03-16", coords: [-37.8497, 144.968], timeIST: "09:30 AM", tickets: "australian-grand-prix" },
+        { name: "Chinese Grand Prix", city: "Shanghai", date: "2025-03-23", coords: [31.3389, 121.2206], timeIST: "12:30 PM", tickets: "chinese-grand-prix" },
+        { name: "Japanese Grand Prix", city: "Suzuka", date: "2025-04-06", coords: [34.8431, 136.541], timeIST: "10:30 AM", tickets: "japanese-grand-prix" },
+        { name: "Bahrain Grand Prix", city: "Sakhir", date: "2025-04-13", coords: [26.0325, 50.5106], timeIST: "08:30 PM", tickets: "bahrain-grand-prix" },
+        { name: "Saudi Arabian Grand Prix", city: "Jeddah", date: "2025-04-20", coords: [21.6319, 39.1044], timeIST: "10:30 PM", tickets: "saudi-arabian-grand-prix" },
+        { name: "Miami Grand Prix", city: "Miami", date: "2025-05-04", coords: [25.9581, -80.2389], timeIST: "01:00 AM (Mon)", tickets: "miami-grand-prix" },
+        { name: "Emilia Romagna Grand Prix", city: "Imola", date: "2025-05-18", coords: [44.3439, 11.7169], timeIST: "06:30 PM", tickets: "emilia-romagna-grand-prix" },
+        { name: "Monaco Grand Prix", city: "Monaco", date: "2025-05-25", coords: [43.7347, 7.4206], timeIST: "06:30 PM", tickets: "monaco-grand-prix" },
+        { name: "Spanish Grand Prix", city: "Barcelona", date: "2025-06-01", coords: [41.5700, 2.2611], timeIST: "06:30 PM", tickets: "spanish-grand-prix" },
+        { name: "Canadian Grand Prix", city: "Montreal", date: "2025-06-15", coords: [45.5000, -73.5222], timeIST: "11:30 PM", tickets: "canadian-grand-prix" },
+        { name: "Austrian Grand Prix", city: "Spielberg", date: "2025-06-29", coords: [47.2197, 14.7647], timeIST: "06:30 PM", tickets: "austrian-grand-prix" },
+        { name: "British Grand Prix", city: "Silverstone", date: "2025-07-06", coords: [52.0786, -1.0169], timeIST: "07:30 PM", tickets: "british-grand-prix" },
+        { name: "Belgian Grand Prix", city: "Spa", date: "2025-07-27", coords: [50.4372, 5.9714], timeIST: "06:30 PM", tickets: "belgian-grand-prix" },
+        { name: "Hungarian Grand Prix", city: "Budapest", date: "2025-08-03", coords: [47.5789, 19.2486], timeIST: "06:30 PM", tickets: "hungarian-grand-prix" },
+        { name: "Dutch Grand Prix", city: "Zandvoort", date: "2025-08-31", coords: [52.3888, 4.5409], timeIST: "06:30 PM", tickets: "dutch-grand-prix" },
+        { name: "Italian Grand Prix", city: "Monza", date: "2025-09-07", coords: [45.6156, 9.2811], timeIST: "06:30 PM", tickets: "italian-grand-prix" },
+        { name: "Azerbaijan Grand Prix", city: "Baku", date: "2025-09-21", coords: [40.3725, 49.8533], timeIST: "04:30 PM", tickets: "azerbaijan-grand-prix" },
+        { name: "Singapore Grand Prix", city: "Singapore", date: "2025-10-05", coords: [1.2914, 103.864], timeIST: "05:30 PM", tickets: "singapore-grand-prix" },
+        { name: "United States Grand Prix", city: "Austin", date: "2025-10-19", coords: [30.1339, -97.6411], timeIST: "12:30 AM (Mon)", tickets: "united-states-grand-prix" },
+        { name: "Mexican Grand Prix", city: "Mexico City", date: "2025-10-26", coords: [19.4042, -99.0907], timeIST: "01:30 AM (Mon)", tickets: "mexico-city-grand-prix" },
+        { name: "Brazilian Grand Prix", city: "São Paulo", date: "2025-11-09", coords: [-23.7011, -46.6997], timeIST: "10:30 PM", tickets: "sao-paulo-grand-prix" },
+        { name: "Las Vegas Grand Prix", city: "Las Vegas", date: "2025-11-22", coords: [36.1147, -115.1728], timeIST: "11:30 AM", tickets: "las-vegas-grand-prix" },
+        { name: "Qatar Grand Prix", city: "Lusail", date: "2025-11-30", coords: [25.4900, 51.4542], timeIST: "09:30 PM", tickets: "qatar-grand-prix" },
+        { name: "Abu Dhabi Grand Prix", city: "Abu Dhabi", date: "2025-12-07", coords: [24.4672, 54.6031], timeIST: "06:30 PM", tickets: "abu-dhabi-grand-prix" }
+    ];
 
-        <div id="results" class="hidden">
-            <div id="capturedSpinsContainer" class="my-6">
-                <h3 class="text-2xl font-bold text-center text-cyan-400 mb-4">Captured Moments</h3>
-                <div id="spin-gallery" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
-            </div>
-            <div class="text-center">
-                <button id="shareBtn" class="btn bg-blue-500 hover:bg-blue-600">Share Results</button>
-            </div>
-        </div>
-    </div>
+    // --- Marker Creation and Logic ---
+    const currentDate = new Date('2025-06-28T15:00:00Z'); // Set current date for demonstration
+    let nextRaceFound = false;
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // UI Elements
-            const startBtn = document.getElementById('startBtn');
-            const stopBtn = document.getElementById('stopBtn');
-            const shareBtn = document.getElementById('shareBtn');
-            const instructions = document.getElementById('instructions');
-            const resultsSection = document.getElementById('results');
-            const capturedSpinsContainer = document.getElementById('spin-gallery');
+    races.forEach((race, index) => {
+        const raceDate = new Date(race.date);
+        let color = '#d90429'; // Default Red for upcoming
 
-            const uiCounts = {
-                yaw: document.getElementById('yawCount'),
-                pitch: document.getElementById('pitchCount'),
-                roll: document.getElementById('rollCount'),
-            };
+        if (raceDate < currentDate) {
+            color = '#808080'; // Grey for done
+        } else if (!nextRaceFound) {
+            color = '#28a745'; // Green for next race
+            nextRaceFound = true;
+        }
 
-            const canvases = {
-                yaw: document.getElementById('yawCanvas'),
-                pitch: document.getElementById('pitchCanvas'),
-                roll: document.getElementById('rollCanvas'),
-            };
-            
-            const contexts = {
-                yaw: canvases.yaw.getContext('2d'),
-                pitch: canvases.pitch.getContext('2d'),
-                roll: canvases.roll.getContext('2d'),
-            };
+        const markerHtml = `<div class="marker-icon" style="background-color:${color}; width: 28px; height: 28px;">${index + 1}</div>`;
 
-            // State Variables
-            let monitoring = false;
-            let history = { yaw: [], pitch: [], roll: [] };
-            const historyLength = 100;
-            let spinProcessor;
-
-            const resetSpinProcessor = () => {
-                spinProcessor = {
-                    yaw: { cumulativeAngle: 0, lastAngle: null, spins: 0 },
-                    pitch: { lastValue: 0, crossedHigh: false, crossedLow: false, spins: 0 },
-                    roll: { lastValue: 0, crossedHigh: false, crossedLow: false, spins: 0 }
-                };
-            };
-            
-            // --- CORE LOGIC ---
-
-            const handleOrientation = (event) => {
-                if (!monitoring) return;
-
-                const { alpha, beta, gamma } = event;
-                if (alpha === null || beta === null || gamma === null) return;
-                
-                processYaw(alpha);
-                processPitch(beta);
-                processRoll(gamma);
-
-                updateLiveGraph('yaw', alpha, 0, 360);
-                updateLiveGraph('pitch', beta, -180, 180);
-                updateLiveGraph('roll', gamma, -90, 90);
-            };
-
-            // ACCURATE YAW SPIN CALCULATION (Cumulative Method)
-            const processYaw = (currentAngle) => {
-                const state = spinProcessor.yaw;
-                if (state.lastAngle === null) {
-                    state.lastAngle = currentAngle;
-                    return;
-                }
-
-                let delta = currentAngle - state.lastAngle;
-
-                // Handle wrap-around from 359 to 1 degree and vice-versa
-                if (delta > 180) delta -= 360;
-                if (delta < -180) delta += 360;
-
-                state.cumulativeAngle += delta;
-                state.lastAngle = currentAngle;
-                
-                const currentSpins = Math.floor(Math.abs(state.cumulativeAngle) / 360);
-
-                if (currentSpins > state.spins) {
-                    state.spins = currentSpins;
-                    triggerSpinUpdate('yaw', state.spins);
-                }
-            };
-            
-            // ACCURATE PITCH/ROLL CALCULATION (Peak Detection for Flips/Rolls)
-            const processPeakDetection = (axis, currentValue, threshold) => {
-                const state = spinProcessor[axis];
-                
-                // Check for crossing the high and low thresholds
-                if (currentValue > threshold) state.crossedHigh = true;
-                if (currentValue < -threshold) state.crossedLow = true;
-                
-                // A full "flip" or "roll" is complete when we return to near-zero after hitting both peaks
-                if (state.crossedHigh && state.crossedLow && Math.abs(currentValue) < (threshold / 2)) {
-                    state.spins++;
-                    triggerSpinUpdate(axis, state.spins);
-                    // Reset for the next spin
-                    state.crossedHigh = false;
-                    state.crossedLow = false;
-                }
-                state.lastValue = currentValue;
-            };
-
-            const processPitch = (currentValue) => processPeakDetection('pitch', currentValue, 75); // 75 degree threshold for a flip
-            const processRoll = (currentValue) => processPeakDetection('roll', currentValue, 75); // 75 degree threshold for a roll
-
-            const triggerSpinUpdate = (axis, count) => {
-                uiCounts[axis].textContent = count;
-                uiCounts[axis].classList.add('spin-detected');
-                setTimeout(() => uiCounts[axis].classList.remove('spin-detected'), 600);
-                
-                captureSpin(axis, count, [...history[axis]]);
-
-                const totalSpins = spinProcessor.yaw.spins + spinProcessor.pitch.spins + spinProcessor.roll.spins;
-                if (totalSpins > 0 && totalSpins % 5 === 0) triggerConfetti();
-            };
-
-            // --- UI & DRAWING ---
-
-            const setupCanvas = (canvas, context) => {
-                const dpr = window.devicePixelRatio || 1;
-                const rect = canvas.getBoundingClientRect();
-                canvas.width = rect.width * dpr;
-                canvas.height = rect.height * dpr;
-                context.scale(dpr, dpr);
-            };
-
-            const resetAll = () => {
-                monitoring = false;
-                resetSpinProcessor();
-                history = { yaw: [], pitch: [], roll: [] };
-                
-                Object.values(uiCounts).forEach(el => el.textContent = '0');
-                
-                Object.entries(contexts).forEach(([key, ctx]) => {
-                    const canvas = canvases[key];
-                    const rect = canvas.getBoundingClientRect();
-                    ctx.clearRect(0, 0, rect.width, rect.height);
-                });
-                
-                capturedSpinsContainer.innerHTML = '';
-                resultsSection.classList.add('hidden');
-                stopBtn.classList.add('hidden');
-                startBtn.classList.remove('hidden');
-            };
-            
-            const startMonitoring = () => {
-                resetAll();
-                monitoring = true;
-                startBtn.classList.add('hidden');
-                stopBtn.classList.remove('hidden');
-                instructions.textContent = "Spin away! Let's see what you've got.";
-                window.addEventListener('deviceorientation', handleOrientation);
-            };
-            
-            const stopMonitoring = () => {
-                monitoring = false;
-                window.removeEventListener('deviceorientation', handleOrientation);
-                stopBtn.classList.add('hidden');
-                startBtn.classList.remove('hidden');
-                
-                const totalSpins = spinProcessor.yaw.spins + spinProcessor.pitch.spins + spinProcessor.roll.spins;
-                if (totalSpins > 0) {
-                    resultsSection.classList.remove('hidden');
-                }
-                instructions.textContent = "Great job! Press 'Start' to go again.";
-            };
-
-            const updateLiveGraph = (axis, value, min, max) => {
-                const data = history[axis];
-                data.push(value);
-                if (data.length > historyLength) data.shift();
-
-                const context = contexts[axis];
-                const canvas = canvases[axis];
-                const { width, height } = canvas.getBoundingClientRect();
-                
-                context.clearRect(0, 0, width, height);
-                context.beginPath();
-                context.lineWidth = 2;
-                context.strokeStyle = '#22d3ee'; // cyan-400
-                
-                data.forEach((point, i) => {
-                    const x = (i / (historyLength - 1)) * width;
-                    const y = height - ((point - min) / (max - min)) * height;
-                    if (i === 0) context.moveTo(x, y);
-                    else context.lineTo(x, y);
-                });
-                context.stroke();
-            };
-            
-            const captureSpin = (axis, count, data) => {
-                const card = document.createElement('div');
-                card.className = 'spin-card';
-                const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                card.innerHTML = `
-                    <p class="font-semibold text-cyan-400">${axis.charAt(0).toUpperCase() + axis.slice(1)} #${count}</p>
-                    <p class="text-xs text-gray-500">${timestamp}</p>
-                `;
-                capturedSpinsContainer.appendChild(card);
-            };
-
-            const triggerConfetti = () => {
-                if (window.confetti) confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 }});
-            };
-
-            // --- EVENT LISTENERS ---
-
-            startBtn.addEventListener('click', () => {
-                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    DeviceOrientationEvent.requestPermission()
-                        .then(state => {
-                            if (state === 'granted') startMonitoring();
-                            else alert('Permission to access device orientation was denied.');
-                        }).catch(console.error);
-                } else {
-                    startMonitoring();
-                }
-            });
-
-            stopBtn.addEventListener('click', stopMonitoring);
-            
-            shareBtn.addEventListener('click', () => {
-                const totalSpins = spinProcessor.yaw.spins + spinProcessor.pitch.spins + spinProcessor.roll.spins;
-                const shareData = {
-                    title: 'Spin Counter Results',
-                    text: `I did ${totalSpins} total spins! (Spins: ${spinProcessor.yaw.spins}, Flips: ${spinProcessor.pitch.spins}, Rolls: ${spinProcessor.roll.spins}). Can you beat me?`,
-                    url: window.location.href
-                };
-
-                if (navigator.share) {
-                    navigator.share(shareData).catch(console.error);
-                } else {
-                    alert('Share functionality not supported on this browser.');
-                }
-            });
-            
-            // Initial Setup
-            Object.values(canvases).forEach((canvas, i) => setupCanvas(canvas, Object.values(contexts)[i]));
-            resetAll();
+        const customIcon = L.divIcon({
+            html: markerHtml,
+            className: '', // remove default leaflet styles
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
         });
-    </script>
+
+        const popupContent = `
+            <h3>${race.name}</h3>
+            <p><strong>Location:</strong> ${race.city}</p>
+            <p><strong>Race Date:</strong> ${race.date}</p>
+            <p><strong>Race Time (IST):</strong> ${race.timeIST}</p>
+            <p><a href="https://tickets.formula1.com/en/f1-33132-${race.tickets}" target="_blank">Buy Tickets &raquo;</a></p>
+            <p><small><em>Timings are subject to change.</em></small></p>
+        `;
+
+        L.marker(race.coords, { icon: customIcon })
+            .addTo(map)
+            .bindPopup(popupContent);
+    });
+
+</script>
+
 </body>
 </html>
