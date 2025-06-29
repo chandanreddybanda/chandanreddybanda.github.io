@@ -4,48 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 2025 Race Calendar Map</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
     <style>
+        /* --- EMBEDDED STYLES --- */
+
+        /* Sets a modern sans-serif font stack */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-            margin: 0;
-            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
             background-color: #f0f2f5;
         }
-        #map {
-            height: 100vh;
-            width: 100%;
-        }
-        .leaflet-popup-content-wrapper {
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .leaflet-popup-content {
-            margin: 15px;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        .leaflet-popup-content h3 {
-            margin: 0 0 10px;
-            font-size: 18px;
-            color: #d90429;
-        }
-        .leaflet-popup-content p {
-            margin: 5px 0;
-        }
-        .leaflet-popup-content a {
-            color: #007bff;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .leaflet-popup-content a:hover {
-            text-decoration: underline;
-        }
-        .leaflet-popup-tip {
-            background: #ffffff;
-        }
+
+        /* Custom Marker Icons */
         .marker-icon {
             display: flex;
             justify-content: center;
@@ -54,91 +28,276 @@
             font-weight: bold;
             font-size: 12px;
             border-radius: 50%;
+            width: 30px !important;
+            height: 30px !important;
             border: 2px solid white;
             box-shadow: 0 2px 5px rgba(0,0,0,0.4);
         }
-    </style>
-</head>
-<body>
 
-<div id="map"></div>
+        .marker-icon.past { background-color: #9ca3af; } /* bg-gray-400 */
+        .marker-icon.next { background-color: #22c55e; } /* bg-green-500 */
+        .marker-icon.upcoming { background-color: #ef4444; } /* bg-red-500 */
 
-<script>
-    // --- Map Initialization ---
-    const map = L.map('map').setView([20, 15], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 19
-    }).addTo(map);
-
-    // --- F1 2025 Race Data ---
-    const races = [
-        { name: "Australian Grand Prix", city: "Melbourne", date: "2025-03-16", coords: [-37.8497, 144.968], timeIST: "09:30 AM", tickets: "australian-grand-prix" },
-        { name: "Chinese Grand Prix", city: "Shanghai", date: "2025-03-23", coords: [31.3389, 121.2206], timeIST: "12:30 PM", tickets: "chinese-grand-prix" },
-        { name: "Japanese Grand Prix", city: "Suzuka", date: "2025-04-06", coords: [34.8431, 136.541], timeIST: "10:30 AM", tickets: "japanese-grand-prix" },
-        { name: "Bahrain Grand Prix", city: "Sakhir", date: "2025-04-13", coords: [26.0325, 50.5106], timeIST: "08:30 PM", tickets: "bahrain-grand-prix" },
-        { name: "Saudi Arabian Grand Prix", city: "Jeddah", date: "2025-04-20", coords: [21.6319, 39.1044], timeIST: "10:30 PM", tickets: "saudi-arabian-grand-prix" },
-        { name: "Miami Grand Prix", city: "Miami", date: "2025-05-04", coords: [25.9581, -80.2389], timeIST: "01:00 AM (Mon)", tickets: "miami-grand-prix" },
-        { name: "Emilia Romagna Grand Prix", city: "Imola", date: "2025-05-18", coords: [44.3439, 11.7169], timeIST: "06:30 PM", tickets: "emilia-romagna-grand-prix" },
-        { name: "Monaco Grand Prix", city: "Monaco", date: "2025-05-25", coords: [43.7347, 7.4206], timeIST: "06:30 PM", tickets: "monaco-grand-prix" },
-        { name: "Spanish Grand Prix", city: "Barcelona", date: "2025-06-01", coords: [41.5700, 2.2611], timeIST: "06:30 PM", tickets: "spanish-grand-prix" },
-        { name: "Canadian Grand Prix", city: "Montreal", date: "2025-06-15", coords: [45.5000, -73.5222], timeIST: "11:30 PM", tickets: "canadian-grand-prix" },
-        { name: "Austrian Grand Prix", city: "Spielberg", date: "2025-06-29", coords: [47.2197, 14.7647], timeIST: "06:30 PM", tickets: "austrian-grand-prix" },
-        { name: "British Grand Prix", city: "Silverstone", date: "2025-07-06", coords: [52.0786, -1.0169], timeIST: "07:30 PM", tickets: "british-grand-prix" },
-        { name: "Belgian Grand Prix", city: "Spa", date: "2025-07-27", coords: [50.4372, 5.9714], timeIST: "06:30 PM", tickets: "belgian-grand-prix" },
-        { name: "Hungarian Grand Prix", city: "Budapest", date: "2025-08-03", coords: [47.5789, 19.2486], timeIST: "06:30 PM", tickets: "hungarian-grand-prix" },
-        { name: "Dutch Grand Prix", city: "Zandvoort", date: "2025-08-31", coords: [52.3888, 4.5409], timeIST: "06:30 PM", tickets: "dutch-grand-prix" },
-        { name: "Italian Grand Prix", city: "Monza", date: "2025-09-07", coords: [45.6156, 9.2811], timeIST: "06:30 PM", tickets: "italian-grand-prix" },
-        { name: "Azerbaijan Grand Prix", city: "Baku", date: "2025-09-21", coords: [40.3725, 49.8533], timeIST: "04:30 PM", tickets: "azerbaijan-grand-prix" },
-        { name: "Singapore Grand Prix", city: "Singapore", date: "2025-10-05", coords: [1.2914, 103.864], timeIST: "05:30 PM", tickets: "singapore-grand-prix" },
-        { name: "United States Grand Prix", city: "Austin", date: "2025-10-19", coords: [30.1339, -97.6411], timeIST: "12:30 AM (Mon)", tickets: "united-states-grand-prix" },
-        { name: "Mexican Grand Prix", city: "Mexico City", date: "2025-10-26", coords: [19.4042, -99.0907], timeIST: "01:30 AM (Mon)", tickets: "mexico-city-grand-prix" },
-        { name: "Brazilian Grand Prix", city: "São Paulo", date: "2025-11-09", coords: [-23.7011, -46.6997], timeIST: "10:30 PM", tickets: "sao-paulo-grand-prix" },
-        { name: "Las Vegas Grand Prix", city: "Las Vegas", date: "2025-11-22", coords: [36.1147, -115.1728], timeIST: "11:30 AM", tickets: "las-vegas-grand-prix" },
-        { name: "Qatar Grand Prix", city: "Lusail", date: "2025-11-30", coords: [25.4900, 51.4542], timeIST: "09:30 PM", tickets: "qatar-grand-prix" },
-        { name: "Abu Dhabi Grand Prix", city: "Abu Dhabi", date: "2025-12-07", coords: [24.4672, 54.6031], timeIST: "06:30 PM", tickets: "abu-dhabi-grand-prix" }
-    ];
-
-    // --- Marker Creation and Logic ---
-    const currentDate = new Date('2025-06-28T15:00:00Z'); // Set current date for demonstration
-    let nextRaceFound = false;
-
-    races.forEach((race, index) => {
-        const raceDate = new Date(race.date);
-        let color = '#d90429'; // Default Red for upcoming
-
-        if (raceDate < currentDate) {
-            color = '#808080'; // Grey for done
-        } else if (!nextRaceFound) {
-            color = '#28a745'; // Green for next race
-            nextRaceFound = true;
+        /* Leaflet Popup Styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
-        const markerHtml = `<div class="marker-icon" style="background-color:${color}; width: 28px; height: 28px;">${index + 1}</div>`;
+        .leaflet-popup-content {
+            margin: 15px !important;
+            font-size: 14px;
+            line-height: 1.6;
+        }
 
-        const customIcon = L.divIcon({
-            html: markerHtml,
-            className: '', // remove default leaflet styles
-            iconSize: [28, 28],
-            iconAnchor: [14, 14]
+        .popup-header {
+            font-size: 16px;
+            font-weight: 700;
+            color: #d90429; /* F1 Red */
+            margin-bottom: 8px;
+        }
+
+        .popup-link {
+            color: #3b82f6; /* Tailwind's blue-500 */
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .popup-link:hover {
+            text-decoration: underline;
+        }
+        .popup-disclaimer {
+            font-size: 11px;
+            color: #6b7280; /* text-gray-500 */
+            margin-top: 10px;
+        }
+
+        /* Sidebar Dropdown Animation */
+        .sidebar-dropdown-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.5s ease-in-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .sidebar-dropdown-content.active {
+            max-height: 200px; /* Adjust as needed */
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        /* Dropdown Arrow Rotation */
+        .toggle-dropdown {
+            transition: transform 0.3s ease;
+        }
+
+        .raceItem.active .toggle-dropdown {
+            transform: rotate(180deg);
+        }
+
+        /* Custom scrollbar for sidebar */
+        #raceList::-webkit-scrollbar {
+            width: 8px;
+        }
+        #raceList::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        #raceList::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 10px;
+        }
+        #raceList::-webkit-scrollbar-thumb:hover {
+            background: #aaa;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="container mx-auto p-4">
+        <main class="flex flex-col md:flex-row gap-6 h-full max-h-[95vh]">
+            <aside id="sidebar" class="w-full md:w-1/3 lg:w-1/4 bg-white rounded-lg shadow-lg p-6 flex flex-col">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">2025 F1 Races</h2>
+                <div id="raceList" class="overflow-y-auto">
+                    </div>
+            </aside>
+
+            <section id="map" class="w-full md:w-2/3 lg:w-3/4 h-[50vh] md:h-auto rounded-lg shadow-xl">
+            </section>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script>
+        // --- EMBEDDED JAVASCRIPT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DATA ---
+            const races = [
+                { id: 1, name: "Australian Grand Prix", city: "Melbourne", date: "2025-03-16", coords: [-37.8497, 144.968], qualifyingTimeIST: "10:30 AM", raceTimeIST: "09:30 AM", tickets: "australian-grand-prix" },
+                { id: 2, name: "Chinese Grand Prix", city: "Shanghai", date: "2025-03-23", coords: [31.3389, 121.220], qualifyingTimeIST: "12:30 PM", raceTimeIST: "12:30 PM", tickets: "chinese-grand-prix" },
+                { id: 3, name: "Japanese Grand Prix", city: "Suzuka", date: "2025-04-06", coords: [34.8431, 136.541], qualifyingTimeIST: "11:30 AM", raceTimeIST: "10:30 AM", tickets: "japanese-grand-prix" },
+                { id: 4, name: "Bahrain Grand Prix", city: "Sakhir", date: "2025-04-13", coords: [26.0325, 50.5106], qualifyingTimeIST: "08:30 PM", raceTimeIST: "08:30 PM", tickets: "bahrain-grand-prix" },
+                { id: 5, name: "Saudi Arabian Grand Prix", city: "Jeddah", date: "2025-04-20", coords: [21.6319, 39.1044], qualifyingTimeIST: "09:30 PM", raceTimeIST: "09:30 PM", tickets: "saudi-arabian-grand-prix" },
+                { id: 6, name: "Miami Grand Prix", city: "Miami", date: "2025-05-04", coords: [25.9581, -80.2389], qualifyingTimeIST: "01:30 AM", raceTimeIST: "01:00 AM", tickets: "miami-grand-prix" },
+                { id: 7, name: "Emilia Romagna Grand Prix", city: "Imola", date: "2025-05-18", coords: [44.3439, 11.7161], qualifyingTimeIST: "07:30 PM", raceTimeIST: "06:30 PM", tickets: "emilia-romagna-grand-prix" },
+                { id: 8, name: "Monaco Grand Prix", city: "Monaco", date: "2025-05-25", coords: [43.7347, 7.4206], qualifyingTimeIST: "07:30 PM", raceTimeIST: "06:30 PM", tickets: "monaco-grand-prix" },
+                { id: 9, name: "Spanish Grand Prix", city: "Barcelona", date: "2025-06-01", coords: [41.5700, 2.2611], qualifyingTimeIST: "07:30 PM", raceTimeIST: "06:30 PM", tickets: "spanish-grand-prix" },
+                { id: 10, name: "Canadian Grand Prix", city: "Montreal", date: "2025-06-15", coords: [45.5000, -73.5222], qualifyingTimeIST: "01:30 AM", raceTimeIST: "11:30 PM", tickets: "canadian-grand-prix" },
+                { id: 11, name: "Austrian Grand Prix", city: "Spielberg", date: "2025-06-29", coords: [47.2197, 14.7647], qualifyingTimeIST: "07:30 PM", raceTimeIST: "06:30 PM", tickets: "austrian-grand-prix" },
+                { id: 12, name: "British Grand Prix", city: "Silverstone", date: "2025-07-06", coords: [52.0786, -1.0169], qualifyingTimeIST: "07:30 PM", raceTimeIST: "07:30 PM", tickets: "british-grand-prix" },
+                { id: 13, name: "Belgian Grand Prix", city: "Spa", date: "2025-07-27", coords: [50.4372, 5.9714], qualifyingTimeIST: "07:30 PM", raceTimeIST: "06:30 PM", tickets: "belgian-grand-prix" },
+                { id: 14, name: "Hungarian Grand Prix", city: "Budapest", date: "2025-08-03", coords: [47.5789, 19.2486], qualifyingTimeIST: "07:30 PM", raceTimeIST: "06:30 PM", tickets: "hungarian-grand-prix" },
+                { id: 15, name: "Dutch Grand Prix", city: "Zandvoort", date: "2025-08-31", coords: [52.3888, 4.5409], qualifyingTimeIST: "06:30 PM", raceTimeIST: "06:30 PM", tickets: "dutch-grand-prix" },
+                { id: 16, name: "Italian Grand Prix", city: "Monza", date: "2025-09-07", coords: [45.6156, 9.2811], qualifyingTimeIST: "07:30 PM", raceTimeIST: "06:30 PM", tickets: "italian-grand-prix" },
+                { id: 17, name: "Azerbaijan Grand Prix", city: "Baku", date: "2025-09-21", coords: [40.3725, 49.8533], qualifyingTimeIST: "05:30 PM", raceTimeIST: "04:30 PM", tickets: "azerbaijan-grand-prix" },
+                { id: 18, name: "Singapore Grand Prix", city: "Singapore", date: "2025-10-05", coords: [1.2914, 103.863], qualifyingTimeIST: "06:30 PM", raceTimeIST: "05:30 PM", tickets: "singapore-grand-prix" },
+                { id: 19, name: "United States Grand Prix", city: "Austin", date: "2025-10-19", coords: [30.1328, -97.6411], qualifyingTimeIST: "03:30 AM", raceTimeIST: "12:30 AM", tickets: "united-states-grand-prix" },
+                { id: 20, name: "Mexican Grand Prix", city: "Mexico City", date: "2025-10-26", coords: [19.4042, -99.0907], qualifyingTimeIST: "02:30 AM", raceTimeIST: "01:30 AM", tickets: "mexico-city-grand-prix" },
+                { id: 21, name: "Brazilian Grand Prix", city: "São Paulo", date: "2025-11-09", coords: [-23.7036, -46.6997], qualifyingTimeIST: "12:00 AM", raceTimeIST: "10:30 PM", tickets: "sao-paulo-grand-prix" },
+                { id: 22, name: "Las Vegas Grand Prix", city: "Las Vegas", date: "2025-11-22", coords: [36.1147, -115.1728], qualifyingTimeIST: "11:30 AM", raceTimeIST: "11:30 AM", tickets: "las-vegas-grand-prix" },
+                { id: 23, name: "Qatar Grand Prix", city: "Lusail", date: "2025-11-30", coords: [25.4900, 51.4542], qualifyingTimeIST: "08:30 PM", raceTimeIST: "08:30 PM", tickets: "qatar-grand-prix" },
+                { id: 24, name: "Abu Dhabi Grand Prix", city: "Abu Dhabi", date: "2025-12-07", coords: [24.4672, 54.6031], qualifyingTimeIST: "07:30 PM", raceTimeIST: "06:30 PM", tickets: "abu-dhabi-grand-prix" },
+            ];
+
+            // --- INITIALIZATION ---
+            // Set the current date dynamically for accurate status.
+            const currentDate = new Date("2025-06-29T11:28:11+05:30"); // Current time is 29 June 2025, 11:28 AM IST
+            const raceList = document.getElementById('raceList');
+            const markers = {};
+            let nextRaceFound = false;
+
+            // --- MAP SETUP ---
+            const map = L.map('map').setView([20, 0], 2);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            // --- CORE LOGIC ---
+            
+            // 1. Determine Race Status
+            races.forEach(race => {
+                const raceDate = new Date(race.date);
+                if (raceDate < currentDate) {
+                    race.status = 'past';
+                } else if (!nextRaceFound) {
+                    race.status = 'next';
+                    nextRaceFound = true;
+                } else {
+                    race.status = 'upcoming';
+                }
+            });
+
+            // 2. Populate Sidebar and Map
+            races.forEach(race => {
+                createRaceItem(race);
+                createMapMarker(race);
+            });
+            
+            // --- UI ELEMENT CREATION ---
+
+            function getStatusClasses(status) {
+                switch (status) {
+                    case 'past': return { dot: 'bg-gray-400', marker: 'past' };
+                    case 'next': return { dot: 'bg-green-500', marker: 'next' };
+                    case 'upcoming': return { dot: 'bg-red-500', marker: 'upcoming' };
+                    default: return { dot: 'bg-gray-300', marker: '' };
+                }
+            }
+
+            function createRaceItem(race) {
+                const statusClasses = getStatusClasses(race.status);
+                const raceItem = document.createElement('div');
+                raceItem.className = 'raceItem bg-gray-50 rounded-lg shadow-sm mb-3 cursor-pointer';
+                raceItem.dataset.raceId = race.id;
+
+                raceItem.innerHTML = `
+                    <div class="header p-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="inline-block w-3 h-3 rounded-full mr-3 ${statusClasses.dot}"></span>
+                            <span class="font-semibold text-gray-800">${race.id}. ${race.name}</span>
+                        </div>
+                        <svg class="toggle-dropdown w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="sidebar-dropdown-content px-4 text-sm text-gray-700">
+                        <div class="pl-6 border-l-2 border-gray-200 ml-1.5 pb-2">
+                            <p><strong>Date:</strong> ${race.date}</p>
+                            <p><strong>Qualifying:</strong> ${race.qualifyingTimeIST} IST</p>
+                            <p><strong>Race:</strong> ${race.raceTimeIST} IST</p>
+                            <a href="https://www.formula1.com/en/racing/2025/${race.tickets}.html" target="_blank" class="popup-link block mt-2">Official F1 Page &rarr;</a>
+                        </div>
+                    </div>
+                `;
+                raceList.appendChild(raceItem);
+            }
+
+            function createMapMarker(race) {
+                const statusClasses = getStatusClasses(race.status);
+                const markerIcon = L.divIcon({
+                    className: `marker-icon ${statusClasses.marker}`,
+                    html: `<b>${race.id}</b>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+
+                const marker = L.marker(race.coords, { icon: markerIcon }).addTo(map);
+                
+                const popupContent = `
+                    <div class="popup-header">${race.name}</div>
+                    <p><strong>Location:</strong> ${race.city}</p>
+                    <p><strong>Date:</strong> ${race.date}</p>
+                    <p><strong>Qualifying:</strong> ${race.qualifyingTimeIST} IST</p>
+                    <p><strong>Race:</strong> ${race.raceTimeIST} IST</p>
+                    <a href="https://www.formula1.com/en/racing/2025/${race.tickets}.html" target="_blank" class="popup-link">Buy Tickets</a>
+                    <p class="popup-disclaimer">Timings are subject to change.</p>
+                `;
+
+                marker.bindPopup(popupContent);
+                markers[race.id] = marker; // Store marker for later reference
+
+                marker.on('click', () => {
+                    const raceItem = document.querySelector(`.raceItem[data-race-id='${race.id}']`);
+                    if (raceItem) {
+                        expandSidebarItem(raceItem, true);
+                    }
+                });
+            }
+
+            // --- EVENT HANDLING ---
+
+            function expandSidebarItem(itemToActivate, scroll = false) {
+                document.querySelectorAll('.raceItem.active').forEach(activeItem => {
+                    if (activeItem !== itemToActivate) {
+                        activeItem.classList.remove('active');
+                        activeItem.querySelector('.sidebar-dropdown-content').classList.remove('active');
+                    }
+                });
+
+                const dropdown = itemToActivate.querySelector('.sidebar-dropdown-content');
+                itemToActivate.classList.toggle('active');
+                dropdown.classList.toggle('active');
+                
+                if (scroll && itemToActivate.classList.contains('active')) {
+                     itemToActivate.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+            
+            raceList.addEventListener('click', (e) => {
+                const raceItem = e.target.closest('.raceItem');
+                if (!raceItem) return;
+
+                const raceId = raceItem.dataset.raceId;
+                const marker = markers[raceId];
+                
+                if (marker) {
+                    map.flyTo(marker.getLatLng(), 10);
+                    marker.openPopup();
+                }
+                
+                expandSidebarItem(raceItem, false);
+            });
         });
-
-        const popupContent = `
-            <h3>${race.name}</h3>
-            <p><strong>Location:</strong> ${race.city}</p>
-            <p><strong>Race Date:</strong> ${race.date}</p>
-            <p><strong>Race Time (IST):</strong> ${race.timeIST}</p>
-            <p><a href="https://tickets.formula1.com/en/f1-33132-${race.tickets}" target="_blank">Buy Tickets &raquo;</a></p>
-            <p><small><em>Timings are subject to change.</em></small></p>
-        `;
-
-        L.marker(race.coords, { icon: customIcon })
-            .addTo(map)
-            .bindPopup(popupContent);
-    });
-
-</script>
-
+    </script>
 </body>
 </html>
