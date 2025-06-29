@@ -11,15 +11,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
-        /* --- EMBEDDED STYLES --- */
+        /* --- EMBEDDED STYLES (No Changes Here) --- */
 
-        /* Sets a modern sans-serif font stack */
         body {
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
             background-color: #f0f2f5;
         }
 
-        /* Custom Marker Icons */
         .marker-icon {
             display: flex;
             justify-content: center;
@@ -34,11 +32,10 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.4);
         }
 
-        .marker-icon.past { background-color: #9ca3af; } /* bg-gray-400 */
-        .marker-icon.next { background-color: #22c55e; } /* bg-green-500 */
-        .marker-icon.upcoming { background-color: #ef4444; } /* bg-red-500 */
+        .marker-icon.past { background-color: #9ca3af; }
+        .marker-icon.next { background-color: #22c55e; }
+        .marker-icon.upcoming { background-color: #ef4444; }
 
-        /* Leaflet Popup Styling */
         .leaflet-popup-content-wrapper {
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -58,7 +55,7 @@
         }
 
         .popup-link {
-            color: #3b82f6; /* Tailwind's blue-500 */
+            color: #3b82f6;
             text-decoration: none;
             font-weight: 600;
         }
@@ -67,11 +64,10 @@
         }
         .popup-disclaimer {
             font-size: 11px;
-            color: #6b7280; /* text-gray-500 */
+            color: #6b7280;
             margin-top: 10px;
         }
 
-        /* Sidebar Dropdown Animation */
         .sidebar-dropdown-content {
             max-height: 0;
             overflow: hidden;
@@ -81,12 +77,11 @@
         }
 
         .sidebar-dropdown-content.active {
-            max-height: 200px; /* Adjust as needed */
+            max-height: 200px;
             padding-top: 1rem;
             padding-bottom: 1rem;
         }
 
-        /* Dropdown Arrow Rotation */
         .toggle-dropdown {
             transition: transform 0.3s ease;
         }
@@ -95,7 +90,6 @@
             transform: rotate(180deg);
         }
 
-        /* Custom scrollbar for sidebar */
         #raceList::-webkit-scrollbar {
             width: 8px;
         }
@@ -131,7 +125,6 @@
     <script>
         // --- EMBEDDED JAVASCRIPT ---
         document.addEventListener('DOMContentLoaded', () => {
-            // --- DATA ---
             const races = [
                 { id: 1, name: "Australian Grand Prix", city: "Melbourne", date: "2025-03-16", coords: [-37.8497, 144.968], qualifyingTimeIST: "10:30 AM", raceTimeIST: "09:30 AM", tickets: "australian-grand-prix" },
                 { id: 2, name: "Chinese Grand Prix", city: "Shanghai", date: "2025-03-23", coords: [31.3389, 121.220], qualifyingTimeIST: "12:30 PM", raceTimeIST: "12:30 PM", tickets: "chinese-grand-prix" },
@@ -159,24 +152,37 @@
                 { id: 24, name: "Abu Dhabi Grand Prix", city: "Abu Dhabi", date: "2025-12-07", coords: [24.4672, 54.6031], qualifyingTimeIST: "07:30 PM", raceTimeIST: "06:30 PM", tickets: "abu-dhabi-grand-prix" },
             ];
 
-            // --- INITIALIZATION ---
-            // Set the current date dynamically for accurate status.
-            const currentDate = new Date("2025-06-29T11:28:11+05:30"); // Current time is 29 June 2025, 11:28 AM IST
+            const currentDate = new Date(); // Use the actual current date and time
             const raceList = document.getElementById('raceList');
             const markers = {};
             let nextRaceFound = false;
 
             // --- MAP SETUP ---
-            const map = L.map('map').setView([20, 0], 2);
+            // Define the boundaries for our map
+            const bounds = L.latLngBounds(L.latLng(-90, -180), L.latLng(90, 180));
+
+            const map = L.map('map', {
+                center: [20, 0],
+                zoom: 2,
+                minZoom: 2, // Prevent zooming out too far
+                maxBounds: bounds, // Restrict map to these boundaries
+                worldCopyJump: false // Prevent map from repeating
+            });
+
+            // **NEW**: Fix for the grey/partial map loading issue.
+            // This ensures the map resizes correctly after the page layout is complete.
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 10);
+            
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                 subdomains: 'abcd',
-                maxZoom: 19
+                noWrap: true // Complementary to the map options
             }).addTo(map);
 
-            // --- CORE LOGIC ---
+            // --- CORE LOGIC (No changes below this line)---
             
-            // 1. Determine Race Status
             races.forEach(race => {
                 const raceDate = new Date(race.date);
                 if (raceDate < currentDate) {
@@ -189,14 +195,11 @@
                 }
             });
 
-            // 2. Populate Sidebar and Map
             races.forEach(race => {
                 createRaceItem(race);
                 createMapMarker(race);
             });
             
-            // --- UI ELEMENT CREATION ---
-
             function getStatusClasses(status) {
                 switch (status) {
                     case 'past': return { dot: 'bg-gray-400', marker: 'past' };
@@ -214,11 +217,11 @@
 
                 raceItem.innerHTML = `
                     <div class="header p-4 flex items-center justify-between">
-                        <div class="flex items-center">
-                            <span class="inline-block w-3 h-3 rounded-full mr-3 ${statusClasses.dot}"></span>
-                            <span class="font-semibold text-gray-800">${race.id}. ${race.name}</span>
+                        <div class="flex items-center min-w-0">
+                            <span class="inline-block w-3 h-3 rounded-full mr-3 flex-shrink-0"></span>
+                            <span class="font-semibold text-gray-800 truncate">${race.id}. ${race.name}</span>
                         </div>
-                        <svg class="toggle-dropdown w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="toggle-dropdown w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                     <div class="sidebar-dropdown-content px-4 text-sm text-gray-700">
                         <div class="pl-6 border-l-2 border-gray-200 ml-1.5 pb-2">
@@ -229,6 +232,8 @@
                         </div>
                     </div>
                 `;
+                // Add the correct color class after creation
+                raceItem.querySelector('.inline-block').classList.add(statusClasses.dot);
                 raceList.appendChild(raceItem);
             }
 
@@ -254,7 +259,7 @@
                 `;
 
                 marker.bindPopup(popupContent);
-                markers[race.id] = marker; // Store marker for later reference
+                markers[race.id] = marker;
 
                 marker.on('click', () => {
                     const raceItem = document.querySelector(`.raceItem[data-race-id='${race.id}']`);
@@ -263,8 +268,6 @@
                     }
                 });
             }
-
-            // --- EVENT HANDLING ---
 
             function expandSidebarItem(itemToActivate, scroll = false) {
                 document.querySelectorAll('.raceItem.active').forEach(activeItem => {
