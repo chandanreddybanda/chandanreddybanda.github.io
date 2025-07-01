@@ -223,11 +223,11 @@
         }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div class="min-h-screen flex flex-col md:flex-row">
+<body class="bg-gray-100 overflow-hidden">
+    <div class="h-screen flex flex-col md:flex-row">
         <!-- Sidebar -->
         <div id="sidebarContainer" class="sidebar-container w-full md:w-1/3 lg:w-1/4 ml-4 mt-4 mb-4 mr-2">
-            <div id="sidebar" class="bg-white rounded-lg shadow-lg p-6 overflow-y-auto max-h-screen">
+            <div id="sidebar" class="bg-white rounded-lg shadow-lg p-6 overflow-y-auto h-full">
                 <!-- Header with collapse button -->
                 <div class="sidebar-header">
                     <h2 class="text-2xl font-bold text-gray-800">2025 F1 Races</h2>
@@ -250,7 +250,7 @@
         
         <!-- Map -->
         <div id="mapContainer" class="flex-1 ml-2 mt-4 mb-4 mr-4">
-            <div id="map" class="w-full h-96 md:h-full rounded-lg shadow-xl"></div>
+            <div id="map" class="w-full h-full rounded-lg shadow-xl"></div>
             <!-- Map expand button (hidden by default, shown when sidebar collapsed) -->
             <div class="map-expand-button" onclick="toggleSidebar()">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -578,6 +578,8 @@
                 } else {
                     // On desktop, expand map to full width but keep margins
                     mapContainer.className = 'flex-1 ml-4 mt-4 mb-4 mr-4';
+                    mapElement.style.height = '';
+                    mapElement.style.borderRadius = '';
                 }
             } else {
                 // Restore normal layout
@@ -614,7 +616,32 @@
                 // Use a slight delay to ensure map is fully initialized
                 setTimeout(() => {
                     focusOnRace(nextRace.id);
+                    
+                    // On desktop, scroll sidebar to center the next race
+                    if (window.innerWidth >= 768) {
+                        scrollToRaceInSidebarCenter(nextRace.id);
+                    }
                 }, 500);
+            }
+        }
+
+        function scrollToRaceInSidebarCenter(raceId) {
+            const raceItem = document.querySelector(`[data-race-id="${raceId}"]`);
+            const sidebar = document.getElementById('sidebar');
+            
+            if (raceItem && sidebar) {
+                const sidebarHeight = sidebar.clientHeight;
+                const raceItemTop = raceItem.offsetTop;
+                const raceItemHeight = raceItem.offsetHeight;
+                
+                // Calculate scroll position to center the race item
+                const scrollPosition = raceItemTop - (sidebarHeight / 2) + (raceItemHeight / 2);
+                
+                // Smooth scroll to the calculated position
+                sidebar.scrollTo({
+                    top: Math.max(0, scrollPosition),
+                    behavior: 'smooth'
+                });
             }
         }
 
